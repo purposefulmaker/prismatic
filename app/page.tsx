@@ -5,7 +5,7 @@ export default function PrismPage() {
     <main className="bg-black min-h-screen overflow-hidden">
       <NothingburgerEngine
         showStats={true}
-        showEquations={true}
+        showEquations={false}
         showControls={true}
         defaultPanelOpen={true}
         nodeCount={1000}
