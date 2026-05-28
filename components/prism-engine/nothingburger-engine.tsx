@@ -1,9 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { usePrismEngine } from '@/hooks/use-prism-engine'
+import { useThreeEngine } from '@/hooks/use-three-engine'
 import { usePrismParameters } from '@/hooks/use-prism-parameters'
-import { PrismCanvas, PrismTextCanvas } from './prism-canvas'
 import { PrismStats } from './prism-stats'
 import { PrismEquations } from './prism-equations'
 import { PrismControlPanel } from './prism-control-panel'
@@ -29,13 +28,17 @@ export interface NothingburgerEngineProps {
 }
 
 /**
- * Complete Nothingburger Prismatic POV Engine
+ * Math Disco Engine — Prismatic POV with Three.js WebGL
  *
  * A modular, importable component that renders the full engine with:
  * - 1000-node Fibonacci sphere
  * - Real physics (Cauchy dispersion, Snell's law, Rodrigues rotation)
  * - DFT/Gabor/Helix/Sinc/Fibonacci beam patterns
  * - POV persistence with exponential decay
+ * - Three.js WebGL rendering with glowing particles
+ * - Beam threads from prism to lit dots
+ * - Rotating rainbow prism core
+ * - Starfield background
  * - Interactive controls
  */
 export function NothingburgerEngine({
@@ -59,18 +62,24 @@ export function NothingburgerEngine({
     setLatticeParam,
   } = usePrismParameters(initialParams)
 
-  const { canvasRef, textCanvasRef, stats } = usePrismEngine(params, {
+  const { canvasRef, stats, panelHidden, setPanelHidden } = useThreeEngine(params, {
     nodeCount,
-    panelWidth: panelOpen ? panelWidth : 0,
   })
+
+  // Sync panel state
+  const handlePanelToggle = () => {
+    setPanelOpen(v => !v)
+    setPanelHidden(!panelOpen)
+  }
 
   return (
     <div className={className}>
-      {/* Main render canvas */}
-      <PrismCanvas ref={canvasRef} />
-
-      {/* Hidden text-to-shape canvas */}
-      <PrismTextCanvas ref={textCanvasRef} />
+      {/* Three.js WebGL canvas */}
+      <canvas
+        ref={canvasRef}
+        className="fixed inset-0 w-full h-full"
+        style={{ touchAction: 'none' }}
+      />
 
       {/* Stats overlay */}
       {showStats && <PrismStats stats={stats} />}
@@ -88,7 +97,7 @@ export function NothingburgerEngine({
           onShapeTextChange={setShapeText}
           onLatticeChange={setLatticeParam}
           isOpen={panelOpen}
-          onToggle={() => setPanelOpen(v => !v)}
+          onToggle={handlePanelToggle}
         />
       )}
     </div>

@@ -37,3 +37,12 @@ export {
   buildLatticeEdges, 
   updateEdgeIntensities 
 } from './lattice'
+
+// Three.js WebGL Renderer
+export {
+  createThreeScene,
+  updateViewport,
+  renderThreeFrame,
+  disposeThreeScene,
+  type ThreeScene,
+} from './three-renderer'
