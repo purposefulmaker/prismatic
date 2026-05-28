@@ -15,7 +15,7 @@ export function createShapeMask(
 ): Uint8ClampedArray | null {
   if (!text) return null
 
-  const txt = text.toUpperCase()
+  const txt = text
 
   canvas.width = 256
   canvas.height = 128
