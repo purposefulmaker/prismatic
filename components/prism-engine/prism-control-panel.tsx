@@ -172,7 +172,7 @@ export function PrismControlPanel({
           NOTHINGBURGER ENGINE
         </div>
         <div className="text-[8px] text-white/30 text-center tracking-[2px] mb-3.5">
-          PRISMATIC POV · 318 EQUATIONS
+          PRISMATIC POV
         </div>
 
         {/* POV Shape */}
