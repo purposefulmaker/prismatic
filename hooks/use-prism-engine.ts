@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { PrismNode, PrismParameters, EngineState, EngineStats, LatticeEdge } from '@/lib/prism-engine'
+import type { PrismNode, PrismParameters, EngineState, EngineStats } from '@/lib/prism-engine'
 import {
   createFibonacciSphere,
   rodriguesRotate,
@@ -11,8 +11,8 @@ import {
   applyPovPersistence,
   renderFrame,
   DEFAULT_NODE_COUNT,
-  buildLatticeEdges,
-  updateEdgeIntensities,
+  createVolumetricShells,
+  applyLightProjection,
 } from '@/lib/prism-engine'
 import { createShapeMask, isNodeInShape } from '@/lib/prism-engine/shape-mask'
 
@@ -63,7 +63,7 @@ export function usePrismEngine(
   })
   const paramsRef = useRef<PrismParameters>(params)
   const shapeMaskRef = useRef<Uint8ClampedArray | null>(null)
-  const edgesRef = useRef<LatticeEdge[]>([])
+  const volumetricNodesRef = useRef<PrismNode[]>([])
   const fpsCounterRef = useRef({ count: 0, lastTime: 0 })
 
   const [isRunning, setIsRunning] = useState(false)
@@ -88,11 +88,11 @@ export function usePrismEngine(
       }
     }
     
-    // Rebuild lattice edges when lattice params change
+    // Rebuild volumetric shells when lattice params change
     if (params.lattice?.enabled && nodesRef.current.length > 0) {
-      edgesRef.current = buildLatticeEdges(nodesRef.current, params.lattice)
+      volumetricNodesRef.current = createVolumetricShells(nodesRef.current, params.lattice)
     } else {
-      edgesRef.current = []
+      volumetricNodesRef.current = []
     }
   }, [params])
 
@@ -170,9 +170,13 @@ export function usePrismEngine(
       const breath = 1 + Math.sin(state.t * 1.5) * P.ba
       const R = state.radius * breath
 
+      // Choose which node set to use
+      const isVolumetric = P.lattice?.enabled && volumetricNodesRef.current.length > 0
+      const activeNodes = isVolumetric ? volumetricNodesRef.current : nodes
+
       // Transform nodes and calculate
       let beamCount = 0
-      for (const node of nodes) {
+      for (const node of activeNodes) {
         // Rodrigues rotation
         const [rx, ry, rz] = rodriguesRotate(node.ox, node.oy, node.oz, arx, ary, arz)
         node.x = rx
@@ -183,37 +187,39 @@ export function usePrismEngine(
         const nm = nodeWavelength(node, P.refIdx, P.dispersion)
         const [cr, cg, cb] = wavelengthToRGB(nm)
 
-        // Beam pattern
-        const bp = calculateBeamPattern(node, P.pattern, state.t, P, nodeCount)
-
-        // Shape mask check
-        const inShape = isNodeInShape(node, shapeMaskRef.current, P.shapeScale)
-
-        // POV persistence with exponential decay
-        const input = bp && inShape ? 1.0 : 0.0
-        node.intensity = applyPovPersistence(node.intensity, input, P.tau, dt)
-
-        if (input > 0) beamCount++
-
-        // Store color
+        // Store base color
         node.r = cr
         node.g = cg
         node.b = cb
+
+        if (isVolumetric) {
+          // Volumetric mode: light projection determines intensity
+          // Intensity is already set during shell creation
+          // Just apply light projection updates
+          beamCount++
+        } else {
+          // Standard mode: beam pattern and shape mask
+          const bp = calculateBeamPattern(node, P.pattern, state.t, P, nodeCount)
+          const inShape = isNodeInShape(node, shapeMaskRef.current, P.shapeScale)
+          const input = bp && inShape ? 1.0 : 0.0
+          node.intensity = applyPovPersistence(node.intensity, input, P.tau, dt)
+          if (input > 0) beamCount++
+        }
+      }
+
+      // Apply light projection for volumetric mode
+      if (isVolumetric) {
+        applyLightProjection(activeNodes, P.lattice)
       }
 
       // Update active beams stat
       if (fpsCounterRef.current.count === 0) {
-        setStats(prev => ({ ...prev, activeBeams: beamCount }))
-      }
-
-      // Update lattice edge intensities
-      if (P.lattice?.enabled && edgesRef.current.length > 0) {
-        updateEdgeIntensities(edgesRef.current, nodes, P.tau, dt)
+        setStats(prev => ({ ...prev, activeBeams: beamCount, nodeCount: activeNodes.length }))
       }
 
       // Render with updated radius
       const renderState = { ...state, radius: R }
-      renderFrame(ctx, nodes, renderState, P, edgesRef.current)
+      renderFrame(ctx, activeNodes, renderState, P)
 
       animationRef.current = requestAnimationFrame(animate)
     },

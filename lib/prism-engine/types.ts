@@ -23,6 +23,12 @@ export interface PrismNode {
   r: number
   g: number
   b: number
+  // Wavelength for spectral coloring
+  wavelength?: number
+  // Shell index for volumetric mode
+  shell?: number
+  // Shell radius for volumetric mode (0-1)
+  radius?: number
 }
 
 export interface PrismParameters {

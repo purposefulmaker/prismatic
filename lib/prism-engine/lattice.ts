@@ -1,282 +1,327 @@
 // ═══════════════════════════════════════════════════════════════
-// MATH DISCO ENGINE — Lattice Module
-// Polyhedra from Fibonacci Sphere: edge connections, shape constraints
+// MATH DISCO ENGINE — Volumetric Shell System
+// Concentric Fibonacci shells collapsing inward
+// White light from behind projects through 3D shape mask
 // ═══════════════════════════════════════════════════════════════
 
-import type { PrismNode, LatticeEdge, LatticeParameters, LatticeBase, LatticeShape } from './types'
+import type { PrismNode, LatticeParameters, LatticeShape } from './types'
+import { GOLDEN_RATIO } from './constants'
+
+// ─── 3D Shape SDFs ───
+// Signed distance functions for volumetric shapes
+// Negative = inside, Positive = outside
 
 /**
- * Calculate distance between two nodes on the sphere
+ * v0 Triangle Prism SDF
+ * Extruded triangle with the Vercel aesthetic
  */
-function nodeDistance(a: PrismNode, b: PrismNode): number {
-  const dx = a.ox - b.ox
-  const dy = a.oy - b.oy
-  const dz = a.oz - b.oz
-  return Math.sqrt(dx * dx + dy * dy + dz * dz)
+function sdfV0Prism(x: number, y: number, z: number): number {
+  // Triangle in XY plane, extruded along Z
+  const depth = 0.4 // How thick the prism is
+  
+  // Equilateral triangle pointing up
+  const scale = 0.75
+  const k = Math.sqrt(3.0)
+  
+  // Transform to triangle space
+  let px = Math.abs(x) * scale
+  let py = y * scale - 0.1 // Shift down slightly
+  
+  // Triangle SDF in 2D
+  px = px - Math.min(px, 0.5)
+  py = py - Math.clamp(py, -0.5 * k, 0.0)
+  const d2d = -Math.sqrt(px * px + py * py) * Math.sign(py + px * k)
+  
+  // Extrude along Z
+  const dz = Math.abs(z) - depth
+  
+  return Math.max(d2d / scale, dz)
 }
 
 /**
- * Find k nearest neighbors for a node
+ * Pyramid (Tetrahedron) SDF
  */
-function findNeighbors(node: PrismNode, nodes: PrismNode[], k: number): number[] {
-  const distances: { idx: number; dist: number }[] = []
+function sdfPyramid(x: number, y: number, z: number): number {
+  const h = 0.8 // Height
+  const scale = 0.7
   
-  for (const other of nodes) {
-    if (other.idx === node.idx) continue
-    distances.push({
-      idx: other.idx,
-      dist: nodeDistance(node, other),
-    })
-  }
+  // Shift so apex is at top
+  const py = (y - 0.3) * scale
+  const px = x * scale
+  const pz = z * scale
   
-  distances.sort((a, b) => a.dist - b.dist)
-  return distances.slice(0, k).map(d => d.idx)
+  // Simple cone approximation
+  const baseRadius = (h - py) * 0.6
+  const r = Math.sqrt(px * px + pz * pz)
+  
+  if (py > h) return py - h
+  if (py < -h * 0.3) return -py - h * 0.3
+  
+  return r - baseRadius
 }
 
 /**
- * Get neighbor count based on lattice base type
- * tri = 3 edges, quad = 4 edges, hex = 6 edges
+ * Cube SDF
  */
-function getNeighborCount(base: LatticeBase): number {
-  switch (base) {
-    case 'tri': return 3
-    case 'quad': return 4
-    case 'hex': return 6
-    case 'off': return 0
-  }
+function sdfCube(x: number, y: number, z: number): number {
+  const size = 0.5
+  const dx = Math.abs(x) - size
+  const dy = Math.abs(y) - size
+  const dz = Math.abs(z) - size
+  
+  return Math.max(dx, dy, dz)
 }
 
 /**
- * Check if a point is inside the v0 triangle shape
- * The triangle points up with a small notch at bottom for the "0"
+ * Diamond (Octahedron) SDF
  */
-function isInV0Shape(x: number, y: number, z: number): boolean {
-  // Project to 2D (front view, x-y plane when z > 0)
-  // Triangle vertices (normalized, pointing up)
-  const scale = 0.9
-  
-  // Main triangle bounds
-  const top = 0.8 * scale
-  const bottom = -0.6 * scale
-  const width = 0.7 * scale
-  
-  // Check if in front hemisphere (mostly)
-  if (z < -0.3) return false
-  
-  // Triangle: top point, bottom-left, bottom-right
-  const height = top - bottom
-  const progress = (top - y) / height // 0 at top, 1 at bottom
-  
-  if (y > top || y < bottom) return false
-  
-  const halfWidthAtY = progress * width
-  if (Math.abs(x) > halfWidthAtY) return false
-  
-  // Cut out inner triangle (smaller, creates the outline effect)
-  const innerScale = 0.65
-  const innerTop = top * innerScale
-  const innerBottom = bottom * innerScale * 0.8
-  const innerWidth = width * innerScale
-  
-  if (y < innerTop && y > innerBottom) {
-    const innerHeight = innerTop - innerBottom
-    const innerProgress = (innerTop - y) / innerHeight
-    const innerHalfWidth = innerProgress * innerWidth
-    
-    if (Math.abs(x) < innerHalfWidth * 0.85) {
-      // Inside the cutout - but keep some structure
-      // Create a subtle "0" shape in the lower center
-      const zeroY = -0.15
-      const zeroRadius = 0.12
-      const distFromZero = Math.sqrt((x * x) + ((y - zeroY) * (y - zeroY)))
-      
-      // Ring for the "0"
-      if (distFromZero > zeroRadius * 0.5 && distFromZero < zeroRadius) {
-        return true
-      }
-      
-      return false
-    }
-  }
-  
-  return true
+function sdfDiamond(x: number, y: number, z: number): number {
+  const scale = 0.65
+  return (Math.abs(x) + Math.abs(y) + Math.abs(z) - scale)
 }
 
 /**
- * Check if a point is inside a pyramid (tetrahedron) shape
+ * Star (Stellated) SDF
  */
-function isInPyramidShape(x: number, y: number, z: number): boolean {
-  const scale = 0.85
-  const apex = 0.9 * scale
-  const base = -0.5 * scale
-  
-  if (y > apex || y < base) return false
-  
-  const progress = (apex - y) / (apex - base)
-  const radius = progress * 0.8 * scale
-  
-  // Triangular cross-section
-  const angle = Math.atan2(z, x)
-  const r = Math.sqrt(x * x + z * z)
-  const triRadius = radius / Math.cos((angle % (Math.PI * 2 / 3)) - Math.PI / 3)
-  
-  return r < Math.abs(triRadius) * 1.2
-}
-
-/**
- * Check if a point is inside a cube shape
- */
-function isInCubeShape(x: number, y: number, z: number): boolean {
-  const size = 0.6
-  return Math.abs(x) < size && Math.abs(y) < size && Math.abs(z) < size
-}
-
-/**
- * Check if a point is inside a diamond (octahedron) shape
- */
-function isInDiamondShape(x: number, y: number, z: number): boolean {
-  const size = 0.75
-  return (Math.abs(x) + Math.abs(y) + Math.abs(z)) < size * 1.5
-}
-
-/**
- * Check if a point is inside a star shape (stellated)
- */
-function isInStarShape(x: number, y: number, z: number): boolean {
+function sdfStar(x: number, y: number, z: number): number {
   const r = Math.sqrt(x * x + y * y + z * z)
-  if (r > 0.95) return false
   
-  // Create spikes along axes
-  const axialDist = Math.min(
-    Math.abs(x),
-    Math.abs(y),
-    Math.abs(z)
-  )
+  // Spikes along each axis
+  const spikeX = Math.abs(x) * 2.5 - 0.8
+  const spikeY = Math.abs(y) * 2.5 - 0.8
+  const spikeZ = Math.abs(z) * 2.5 - 0.8
   
-  // Points along axes extend further
-  const threshold = 0.25 + (0.7 - axialDist) * 0.5
-  return r < threshold
+  // Core sphere
+  const core = r - 0.3
+  
+  // Union of core and inverse spikes
+  return Math.max(core, Math.min(spikeX, spikeY, spikeZ))
 }
 
 /**
- * Check if node is within the target lattice shape
+ * Evaluate shape SDF at a point
+ * Returns signed distance (negative = inside shape)
  */
-export function isInLatticeShape(node: PrismNode, shape: LatticeShape): boolean {
-  const { ox, oy, oz } = node
-  
+export function evaluateShapeSDF(
+  x: number,
+  y: number,
+  z: number,
+  shape: LatticeShape
+): number {
   switch (shape) {
     case 'sphere':
-      return true // All nodes valid
+      return Math.sqrt(x * x + y * y + z * z) - 1.0
     case 'v0':
-      return isInV0Shape(ox, oy, oz)
+      return sdfV0Prism(x, y, z)
     case 'pyramid':
-      return isInPyramidShape(ox, oy, oz)
+      return sdfPyramid(x, y, z)
     case 'cube':
-      return isInCubeShape(ox, oy, oz)
+      return sdfCube(x, y, z)
     case 'diamond':
-      return isInDiamondShape(ox, oy, oz)
+      return sdfDiamond(x, y, z)
     case 'star':
-      return isInStarShape(ox, oy, oz)
+      return sdfStar(x, y, z)
     default:
-      return true
+      return -1 // Always inside
   }
 }
 
 /**
- * Build lattice edges from Fibonacci sphere nodes
- * Connects each node to its k nearest neighbors based on base type
+ * Create volumetric shell nodes
+ * Multiple concentric Fibonacci spheres at decreasing radii
  */
-export function buildLatticeEdges(
-  nodes: PrismNode[],
+export function createVolumetricShells(
+  baseNodes: PrismNode[],
   params: LatticeParameters
-): LatticeEdge[] {
-  if (!params.enabled || params.base === 'off') return []
+): PrismNode[] {
+  if (!params.enabled) return baseNodes
   
-  const edges: LatticeEdge[] = []
-  const edgeSet = new Set<string>() // Prevent duplicates
-  const k = getNeighborCount(params.base)
+  const shells = Math.max(1, Math.min(params.shells, 32))
+  const volumetricNodes: PrismNode[] = []
   
-  // Filter nodes by shape
-  const validNodes = nodes.filter(n => isInLatticeShape(n, params.shape))
-  const validIdxSet = new Set(validNodes.map(n => n.idx))
+  // Light source position (behind the prism, -Z direction)
+  const lightZ = -2.0
+  const lightIntensity = 1.0
   
-  for (const node of validNodes) {
-    const neighbors = findNeighbors(node, nodes, k * 2) // Get extra to filter
+  for (let shellIdx = 0; shellIdx < shells; shellIdx++) {
+    // Radius decreases from 1.0 to a small core
+    // Use sqrt for more even distribution of volume
+    const shellProgress = shellIdx / (shells - 1)
+    const radius = 1.0 - (shellProgress * (1.0 - params.collapse * 0.8))
     
-    let connected = 0
-    for (const neighborIdx of neighbors) {
-      if (connected >= k) break
-      if (!validIdxSet.has(neighborIdx)) continue
+    // Fewer nodes on inner shells (proportional to surface area)
+    const nodeRatio = radius * radius
+    const shellNodeCount = Math.max(8, Math.floor(baseNodes.length * nodeRatio))
+    
+    // Sample nodes for this shell using golden angle
+    for (let i = 0; i < shellNodeCount; i++) {
+      // Golden angle distribution
+      const theta = Math.acos(1 - 2 * (i + 0.5) / shellNodeCount)
+      const phi = 2 * Math.PI * i / GOLDEN_RATIO
       
-      // Create unique edge key (smaller idx first)
-      const edgeKey = node.idx < neighborIdx 
-        ? `${node.idx}-${neighborIdx}` 
-        : `${neighborIdx}-${node.idx}`
+      // Spherical to Cartesian at this radius
+      const sinTheta = Math.sin(theta)
+      const x = sinTheta * Math.cos(phi) * radius
+      const y = Math.cos(theta) * radius
+      const z = sinTheta * Math.sin(phi) * radius
       
-      if (edgeSet.has(edgeKey)) continue
-      edgeSet.add(edgeKey)
+      // Check if point is inside the 3D shape
+      const sdf = evaluateShapeSDF(x, y, z, params.shape)
       
-      // Calculate midpoint wavelength
-      const other = nodes[neighborIdx]
-      const midTheta = (node.theta + other.theta) / 2
-      const wavelength = 380 + (midTheta / Math.PI) * 320
+      // Only include points inside or on surface of shape
+      // Slightly expand for outer shell visibility
+      const threshold = shellIdx === 0 ? 0.05 : 0.0
+      if (sdf > threshold) continue
       
-      edges.push({
-        a: node.idx,
-        b: neighborIdx,
-        intensity: 1.0,
+      // Calculate distance from light source
+      const dx = x
+      const dy = y  
+      const dz = z - lightZ
+      const lightDist = Math.sqrt(dx * dx + dy * dy + dz * dz)
+      
+      // Light attenuation (inverse square, clamped)
+      const attenuation = lightIntensity / (1 + lightDist * lightDist * 0.3)
+      
+      // Surface proximity boost (brighter near shape surface)
+      const surfaceBoost = sdf > -0.1 ? 1.5 : 1.0
+      
+      // Shell depth coloring (outer shells = cooler, inner = warmer)
+      const wavelength = 380 + shellProgress * 320 // Violet to red
+      
+      // Create volumetric node
+      const node: PrismNode = {
+        idx: volumetricNodes.length,
+        theta,
+        phi,
+        ox: x,
+        oy: y,
+        oz: z,
+        x,
+        y,
+        z,
+        intensity: attenuation * surfaceBoost * (0.3 + Math.random() * 0.2),
         wavelength,
-      })
+        r: 1,
+        g: 1,
+        b: 1,
+        shell: shellIdx,
+        radius,
+      }
       
-      connected++
+      volumetricNodes.push(node)
     }
   }
   
-  return edges
+  return volumetricNodes
 }
 
 /**
- * Apply shell collapse - moves nodes inward based on their shell layer
+ * Update volumetric node positions with rotation
+ * Applies Rodrigues rotation to all shell nodes
  */
-export function applyShellCollapse(
+export function rotateVolumetricNodes(
   nodes: PrismNode[],
-  collapse: number,
-  shells: number
+  axis: [number, number, number],
+  angle: number
 ): void {
-  if (collapse <= 0) return
+  const [kx, ky, kz] = axis
+  const cosA = Math.cos(angle)
+  const sinA = Math.sin(angle)
+  const oneMinusCos = 1 - cosA
   
   for (const node of nodes) {
-    // Determine shell based on theta (latitude)
-    const shellIdx = Math.floor((node.theta / Math.PI) * shells)
-    const shellProgress = shellIdx / shells // 0 at top, 1 at bottom
+    const { ox, oy, oz } = node
     
-    // Collapse factor increases toward center shells
-    const centerDist = Math.abs(shellProgress - 0.5) * 2 // 0 at equator, 1 at poles
-    const collapseFactor = 1 - (collapse * (1 - centerDist) * 0.5)
+    // Rodrigues rotation formula
+    const dot = kx * ox + ky * oy + kz * oz
+    const crossX = ky * oz - kz * oy
+    const crossY = kz * ox - kx * oz
+    const crossZ = kx * oy - ky * ox
     
-    // Scale original coordinates inward
-    node.ox *= collapseFactor
-    node.oy *= collapseFactor
-    node.oz *= collapseFactor
+    node.x = ox * cosA + crossX * sinA + kx * dot * oneMinusCos
+    node.y = oy * cosA + crossY * sinA + ky * dot * oneMinusCos
+    node.z = oz * cosA + crossZ * sinA + kz * dot * oneMinusCos
   }
 }
 
 /**
- * Update edge intensities with POV persistence
+ * Apply white light projection from behind
+ * Illuminates nodes based on their Z position and shape surface
  */
-export function updateEdgeIntensities(
-  edges: LatticeEdge[],
+export function applyLightProjection(
   nodes: PrismNode[],
-  tau: number,
-  dt: number
+  params: LatticeParameters
 ): void {
-  for (const edge of edges) {
-    const nodeA = nodes[edge.a]
-    const nodeB = nodes[edge.b]
+  const lightZ = -2.0
+  const lightX = 0
+  const lightY = 0
+  
+  for (const node of nodes) {
+    // Ray from light to node
+    const dx = node.x - lightX
+    const dy = node.y - lightY
+    const dz = node.z - lightZ
+    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz)
     
-    // Edge intensity is average of connected node intensities
-    const targetIntensity = (nodeA.intensity + nodeB.intensity) / 2
-    const decay = Math.exp(-dt / Math.max(tau, 0.01))
-    edge.intensity = edge.intensity * decay + targetIntensity * (1 - decay)
+    // Normalize ray direction
+    const rayX = dx / dist
+    const rayY = dy / dist
+    const rayZ = dz / dist
+    
+    // Check if node is on the "lit" side (facing the light)
+    // Approximate normal from position on sphere/shape
+    const normalDot = -(node.x * rayX + node.y * rayY + node.z * rayZ)
+    
+    // Front-facing gets more light
+    const facing = Math.max(0, normalDot)
+    
+    // Distance falloff
+    const falloff = 1 / (1 + dist * 0.2)
+    
+    // Shell depth factor (outer shells slightly brighter)
+    const shellFactor = node.radius ? 0.7 + node.radius * 0.3 : 1.0
+    
+    // Combine factors
+    const lightAmount = facing * falloff * shellFactor * params.innerGlow
+    
+    // Blend toward white based on light
+    node.intensity = Math.min(1, node.intensity + lightAmount * 0.5)
+    
+    // Shift color toward white for lit areas
+    const whiteMix = lightAmount * 0.6
+    node.r = node.r * (1 - whiteMix) + whiteMix
+    node.g = node.g * (1 - whiteMix) + whiteMix
+    node.b = node.b * (1 - whiteMix) + whiteMix
+  }
+}
+
+/**
+ * Check if a base node is inside the lattice shape
+ * Used for filtering in non-volumetric mode
+ */
+export function isInLatticeShape(node: PrismNode, shape: LatticeShape): boolean {
+  const sdf = evaluateShapeSDF(node.ox, node.oy, node.oz, shape)
+  return sdf <= 0.05
+}
+
+// Legacy exports for compatibility
+export function buildLatticeEdges(): never[] {
+  return [] // No longer using edges
+}
+
+export function updateEdgeIntensities(): void {
+  // No-op for compatibility
+}
+
+// Math.clamp polyfill
+if (!Math.clamp) {
+  Math.clamp = function(val: number, min: number, max: number): number {
+    return Math.min(Math.max(val, min), max)
+  }
+}
+
+declare global {
+  interface Math {
+    clamp(val: number, min: number, max: number): number
   }
 }

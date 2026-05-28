@@ -27,5 +27,13 @@ export { drawCentralPrism, drawBeam, drawNode, drawLatticeEdge, drawLatticeVerte
 // Shape Mask
 export { createShapeMask, isNodeInShape } from './shape-mask'
 
-// Lattice
-export { buildLatticeEdges, isInLatticeShape, updateEdgeIntensities } from './lattice'
+// Lattice / Volumetric Shells
+export { 
+  createVolumetricShells, 
+  rotateVolumetricNodes, 
+  applyLightProjection,
+  evaluateShapeSDF,
+  isInLatticeShape, 
+  buildLatticeEdges, 
+  updateEdgeIntensities 
+} from './lattice'
