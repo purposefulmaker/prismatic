@@ -157,7 +157,8 @@ export function createVolumetricShells(
     for (let i = 0; i < shellNodeCount; i++) {
       // Golden angle distribution
       const theta = Math.acos(1 - 2 * (i + 0.5) / shellNodeCount)
-      const phi = 2 * Math.PI * i / GOLDEN_RATIO
+      // Negate phi to match text direction (left-to-right)
+      const phi = -2 * Math.PI * i / GOLDEN_RATIO
       
       // Spherical to Cartesian at this radius
       const sinTheta = Math.sin(theta)
