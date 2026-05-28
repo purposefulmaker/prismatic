@@ -56,6 +56,7 @@ export function NothingburgerEngine({
     applyPreset,
     setPattern,
     setShapeText,
+    setLatticeParam,
   } = usePrismParameters(initialParams)
 
   const { canvasRef, textCanvasRef, stats } = usePrismEngine(params, {
@@ -85,6 +86,7 @@ export function NothingburgerEngine({
           onPatternChange={setPattern}
           onPresetApply={applyPreset}
           onShapeTextChange={setShapeText}
+          onLatticeChange={setLatticeParam}
           isOpen={panelOpen}
           onToggle={() => setPanelOpen(v => !v)}
         />

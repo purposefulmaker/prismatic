@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════
-// NOTHINGBURGER ENGINE — Module Exports
-// Prismatic POV · 318 Equations
+// MATH DISCO ENGINE — Module Exports
+// Prismatic POV · Lattice Mode
 // ═══════════════════════════════════════════════════════════════
 
 // Types
@@ -22,7 +22,10 @@ export {
 } from './physics'
 
 // Renderer
-export { drawCentralPrism, drawBeam, drawNode, renderFrame } from './renderer'
+export { drawCentralPrism, drawBeam, drawNode, drawLatticeEdge, drawLatticeVertex, renderFrame } from './renderer'
 
 // Shape Mask
 export { createShapeMask, isNodeInShape } from './shape-mask'
+
+// Lattice
+export { buildLatticeEdges, isInLatticeShape, updateEdgeIntensities } from './lattice'

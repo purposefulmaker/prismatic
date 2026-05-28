@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useRef, useState } from 'react'
-import type { PrismParameters, PrismPreset, BeamPattern } from '@/lib/prism-engine'
+import type { PrismParameters, PrismPreset, BeamPattern, LatticeParameters } from '@/lib/prism-engine'
 import { DEFAULT_PARAMETERS, PRESETS } from '@/lib/prism-engine'
 
 export interface UsePrismParametersReturn {
@@ -11,6 +11,7 @@ export interface UsePrismParametersReturn {
   applyPreset: (presetName: string) => void
   setPattern: (pattern: BeamPattern) => void
   setShapeText: (text: string) => void
+  setLatticeParam: <K extends keyof LatticeParameters>(key: K, value: LatticeParameters[K]) => void
   presets: PrismPreset[]
   resetToDefaults: () => void
 }
@@ -41,7 +42,14 @@ export function usePrismParameters(
   const applyPreset = useCallback((presetName: string) => {
     const preset = PRESETS.find(p => p.name === presetName)
     if (preset) {
-      setParamsState(prev => ({ ...prev, ...preset.params }))
+      setParamsState(prev => {
+        const newParams = { ...prev, ...preset.params }
+        // Deep merge lattice if preset includes it
+        if (preset.params.lattice) {
+          newParams.lattice = { ...prev.lattice, ...preset.params.lattice }
+        }
+        return newParams
+      })
     }
   }, [])
 
@@ -51,6 +59,13 @@ export function usePrismParameters(
 
   const setShapeText = useCallback((text: string) => {
     setParamsState(prev => ({ ...prev, shapeTxt: text }))
+  }, [])
+
+  const setLatticeParam = useCallback(<K extends keyof LatticeParameters>(key: K, value: LatticeParameters[K]) => {
+    setParamsState(prev => ({
+      ...prev,
+      lattice: { ...prev.lattice, [key]: value },
+    }))
   }, [])
 
   const resetToDefaults = useCallback(() => {
@@ -64,6 +79,7 @@ export function usePrismParameters(
     applyPreset,
     setPattern,
     setShapeText,
+    setLatticeParam,
     presets: PRESETS,
     resetToDefaults,
   }

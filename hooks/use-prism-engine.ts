@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { PrismNode, PrismParameters, EngineState, EngineStats } from '@/lib/prism-engine'
+import type { PrismNode, PrismParameters, EngineState, EngineStats, LatticeEdge } from '@/lib/prism-engine'
 import {
   createFibonacciSphere,
   rodriguesRotate,
@@ -11,6 +11,8 @@ import {
   applyPovPersistence,
   renderFrame,
   DEFAULT_NODE_COUNT,
+  buildLatticeEdges,
+  updateEdgeIntensities,
 } from '@/lib/prism-engine'
 import { createShapeMask, isNodeInShape } from '@/lib/prism-engine/shape-mask'
 
@@ -61,6 +63,7 @@ export function usePrismEngine(
   })
   const paramsRef = useRef<PrismParameters>(params)
   const shapeMaskRef = useRef<Uint8ClampedArray | null>(null)
+  const edgesRef = useRef<LatticeEdge[]>([])
   const fpsCounterRef = useRef({ count: 0, lastTime: 0 })
 
   const [isRunning, setIsRunning] = useState(false)
@@ -83,6 +86,13 @@ export function usePrismEngine(
       if (ctx) {
         shapeMaskRef.current = createShapeMask(params.shapeTxt, textCanvasRef.current, ctx)
       }
+    }
+    
+    // Rebuild lattice edges when lattice params change
+    if (params.lattice?.enabled && nodesRef.current.length > 0) {
+      edgesRef.current = buildLatticeEdges(nodesRef.current, params.lattice)
+    } else {
+      edgesRef.current = []
     }
   }, [params])
 
@@ -196,9 +206,14 @@ export function usePrismEngine(
         setStats(prev => ({ ...prev, activeBeams: beamCount }))
       }
 
+      // Update lattice edge intensities
+      if (P.lattice?.enabled && edgesRef.current.length > 0) {
+        updateEdgeIntensities(edgesRef.current, nodes, P.tau, dt)
+      }
+
       // Render with updated radius
       const renderState = { ...state, radius: R }
-      renderFrame(ctx, nodes, renderState, P)
+      renderFrame(ctx, nodes, renderState, P, edgesRef.current)
 
       animationRef.current = requestAnimationFrame(animate)
     },

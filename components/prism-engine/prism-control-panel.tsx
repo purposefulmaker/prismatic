@@ -1,7 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import type { BeamPattern, PrismParameters, PrismPreset } from '@/lib/prism-engine'
+import type { BeamPattern, PrismParameters, LatticeBase, LatticeShape } from '@/lib/prism-engine'
 import { PRESETS } from '@/lib/prism-engine'
 
 // ─── Section Component ───
@@ -108,6 +108,7 @@ export interface PrismControlPanelProps {
   onPatternChange: (pattern: BeamPattern) => void
   onPresetApply: (presetName: string) => void
   onShapeTextChange: (text: string) => void
+  onLatticeChange: <K extends keyof PrismParameters['lattice']>(key: K, value: PrismParameters['lattice'][K]) => void
   isOpen: boolean
   onToggle: () => void
   className?: string
@@ -119,6 +120,7 @@ export function PrismControlPanel({
   onPatternChange,
   onPresetApply,
   onShapeTextChange,
+  onLatticeChange,
   isOpen,
   onToggle,
   className,
@@ -130,6 +132,22 @@ export function PrismControlPanel({
     { name: 'sinc', label: 'SINC' },
     { name: 'fib', label: 'FIBONACCI' },
     { name: 'all', label: 'ALL ON' },
+  ]
+
+  const latticeShapes: { name: LatticeShape; label: string }[] = [
+    { name: 'sphere', label: 'SPHERE' },
+    { name: 'v0', label: 'v0' },
+    { name: 'pyramid', label: 'PYRAMID' },
+    { name: 'cube', label: 'CUBE' },
+    { name: 'diamond', label: 'DIAMOND' },
+    { name: 'star', label: 'STAR' },
+  ]
+
+  const latticeBases: { name: LatticeBase; label: string }[] = [
+    { name: 'tri', label: 'TRI' },
+    { name: 'quad', label: 'QUAD' },
+    { name: 'hex', label: 'HEX' },
+    { name: 'off', label: 'OFF' },
   ]
 
   return (
@@ -204,6 +222,95 @@ export function PrismControlPanel({
               onChange={v => onParamChange('shapeScale', v / 10)}
             />
           </ControlRow>
+        </Section>
+
+        {/* Lattice Mode */}
+        <Section title="◆ LATTICE MODE">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-[9px] text-white/50">Enable Lattice</label>
+            <button
+              onClick={() => onLatticeChange('enabled', !params.lattice.enabled)}
+              className={cn(
+                'px-3 py-1 text-[8px] tracking-[1px] rounded-sm border transition-all',
+                params.lattice.enabled
+                  ? 'bg-white/20 border-white/40 text-white'
+                  : 'bg-white/4 border-white/10 text-white/40'
+              )}
+            >
+              {params.lattice.enabled ? 'ON' : 'OFF'}
+            </button>
+          </div>
+          
+          {params.lattice.enabled && (
+            <>
+              <div className="text-[8px] text-white/35 mb-1.5">SHAPE</div>
+              <ButtonGroup>
+                {latticeShapes.slice(0, 3).map(s => (
+                  <PatternButton
+                    key={s.name}
+                    label={s.label}
+                    active={params.lattice.shape === s.name}
+                    onClick={() => onLatticeChange('shape', s.name)}
+                  />
+                ))}
+              </ButtonGroup>
+              <ButtonGroup>
+                {latticeShapes.slice(3).map(s => (
+                  <PatternButton
+                    key={s.name}
+                    label={s.label}
+                    active={params.lattice.shape === s.name}
+                    onClick={() => onLatticeChange('shape', s.name)}
+                  />
+                ))}
+              </ButtonGroup>
+              
+              <div className="text-[8px] text-white/35 mb-1.5 mt-3">BASE POLYGON</div>
+              <ButtonGroup>
+                {latticeBases.map(b => (
+                  <PatternButton
+                    key={b.name}
+                    label={b.label}
+                    active={params.lattice.base === b.name}
+                    onClick={() => onLatticeChange('base', b.name)}
+                  />
+                ))}
+              </ButtonGroup>
+              
+              <ControlRow label="Shells" value={params.lattice.shells}>
+                <PrismSlider
+                  value={params.lattice.shells}
+                  min={4}
+                  max={32}
+                  onChange={v => onLatticeChange('shells', v)}
+                />
+              </ControlRow>
+              <ControlRow label="Edge Width" value={params.lattice.edgeWidth.toFixed(1)}>
+                <PrismSlider
+                  value={params.lattice.edgeWidth * 10}
+                  min={5}
+                  max={50}
+                  onChange={v => onLatticeChange('edgeWidth', v / 10)}
+                />
+              </ControlRow>
+              <ControlRow label="Edge Opacity" value={params.lattice.edgeOpacity.toFixed(2)}>
+                <PrismSlider
+                  value={params.lattice.edgeOpacity * 100}
+                  min={10}
+                  max={100}
+                  onChange={v => onLatticeChange('edgeOpacity', v / 100)}
+                />
+              </ControlRow>
+              <ControlRow label="Inner Glow" value={params.lattice.innerGlow.toFixed(1)}>
+                <PrismSlider
+                  value={params.lattice.innerGlow * 10}
+                  min={0}
+                  max={10}
+                  onChange={v => onLatticeChange('innerGlow', v / 10)}
+                />
+              </ControlRow>
+            </>
+          )}
         </Section>
 
         {/* Prism */}

@@ -1,8 +1,8 @@
 // ═══════════════════════════════════════════════════════════════
-// NOTHINGBURGER ENGINE — Canvas Renderer
+// MATH DISCO ENGINE — Canvas Renderer
 // ═══════════════════════════════════════════════════════════════
 
-import type { PrismNode, PrismParameters, EngineState } from './types'
+import type { PrismNode, PrismParameters, EngineState, LatticeEdge } from './types'
 import { wavelengthToRGB } from './physics'
 
 /**
@@ -125,13 +125,127 @@ export function drawNode(
 }
 
 /**
+ * Draw a lattice edge between two nodes
+ */
+export function drawLatticeEdge(
+  ctx: CanvasRenderingContext2D,
+  edge: LatticeEdge,
+  nodes: PrismNode[],
+  centerX: number,
+  centerY: number,
+  radius: number,
+  params: PrismParameters
+): void {
+  const nodeA = nodes[edge.a]
+  const nodeB = nodes[edge.b]
+  
+  if (!nodeA || !nodeB) return
+  
+  // Only draw edges in front hemisphere
+  const avgZ = (nodeA.z + nodeB.z) / 2
+  if (avgZ < -0.3) return
+  
+  const depth = (avgZ + 1) / 2
+  const intensity = Math.max(nodeA.intensity, nodeB.intensity, 0.15) // Minimum visibility
+  const alpha = intensity * params.lattice.edgeOpacity * depth
+  
+  if (alpha < 0.02) return
+  
+  const ax = centerX + nodeA.x * radius
+  const ay = centerY + nodeA.y * radius
+  const bx = centerX + nodeB.x * radius
+  const by = centerY + nodeB.y * radius
+  
+  // Get color from edge wavelength
+  const [r, g, b] = wavelengthToRGB(edge.wavelength)
+  
+  // Create gradient along edge
+  const gradient = ctx.createLinearGradient(ax, ay, bx, by)
+  const [ar, ag, ab] = [nodeA.r, nodeA.g, nodeA.b]
+  const [br, bg, bb] = [nodeB.r, nodeB.g, nodeB.b]
+  
+  gradient.addColorStop(0, `rgba(${(ar * 255) | 0},${(ag * 255) | 0},${(ab * 255) | 0},${alpha})`)
+  gradient.addColorStop(0.5, `rgba(${(r * 255) | 0},${(g * 255) | 0},${(b * 255) | 0},${alpha * 1.2})`)
+  gradient.addColorStop(1, `rgba(${(br * 255) | 0},${(bg * 255) | 0},${(bb * 255) | 0},${alpha})`)
+  
+  ctx.beginPath()
+  ctx.moveTo(ax, ay)
+  ctx.lineTo(bx, by)
+  ctx.strokeStyle = gradient
+  ctx.lineWidth = params.lattice.edgeWidth * (0.5 + depth * 0.5) * (0.5 + intensity * 0.5)
+  ctx.lineCap = 'round'
+  ctx.stroke()
+  
+  // Inner glow on bright edges
+  if (params.lattice.innerGlow > 0 && intensity > 0.5) {
+    const glowAlpha = alpha * params.lattice.innerGlow * 0.3
+    ctx.beginPath()
+    ctx.moveTo(ax, ay)
+    ctx.lineTo(bx, by)
+    ctx.strokeStyle = `rgba(255,255,255,${glowAlpha})`
+    ctx.lineWidth = params.lattice.edgeWidth * 0.3
+    ctx.stroke()
+  }
+}
+
+/**
+ * Draw lattice vertex node (brighter, more defined than regular nodes)
+ */
+export function drawLatticeVertex(
+  ctx: CanvasRenderingContext2D,
+  node: PrismNode,
+  centerX: number,
+  centerY: number,
+  radius: number,
+  params: PrismParameters
+): void {
+  const px = centerX + node.x * radius
+  const py = centerY + node.y * radius
+  const depth = (node.z + 1) / 2
+  
+  if (depth < 0.2) return
+  
+  const intensity = Math.max(node.intensity, 0.2) // Vertices always somewhat visible
+  const size = params.dr * (0.6 + depth * 0.4) * (0.7 + intensity * 0.3)
+  const alpha = intensity * (0.4 + depth * 0.6)
+  
+  // Outer glow
+  if (params.gr > 0) {
+    const glowSize = size + params.gr * intensity * 0.5
+    const glowGradient = ctx.createRadialGradient(px, py, 0, px, py, glowSize)
+    glowGradient.addColorStop(0, `rgba(${(node.r * 255) | 0},${(node.g * 255) | 0},${(node.b * 255) | 0},${alpha * 0.5})`)
+    glowGradient.addColorStop(1, `rgba(${(node.r * 255) | 0},${(node.g * 255) | 0},${(node.b * 255) | 0},0)`)
+    
+    ctx.fillStyle = glowGradient
+    ctx.beginPath()
+    ctx.arc(px, py, glowSize, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  
+  // Core vertex
+  ctx.fillStyle = `rgba(${Math.min(255, (node.r * 255 + 60) | 0)},${Math.min(255, (node.g * 255 + 60) | 0)},${Math.min(255, (node.b * 255 + 60) | 0)},${alpha})`
+  ctx.beginPath()
+  ctx.arc(px, py, size, 0, Math.PI * 2)
+  ctx.fill()
+  
+  // Bright center dot
+  if (intensity > 0.6) {
+    ctx.fillStyle = `rgba(255,255,255,${alpha * 0.7})`
+    ctx.beginPath()
+    ctx.arc(px, py, size * 0.3, 0, Math.PI * 2)
+    ctx.fill()
+  }
+}
+
+/**
  * Full frame render
  */
 export function renderFrame(
   ctx: CanvasRenderingContext2D,
   nodes: PrismNode[],
   state: EngineState,
-  params: PrismParameters
+  params: PrismParameters,
+  edges?: LatticeEdge[]
 ): void {
   const { width, height, centerX, centerY, radius } = state
 
@@ -142,16 +256,45 @@ export function renderFrame(
   // Sort nodes by z-depth (back to front)
   const sorted = [...nodes].sort((a, b) => a.z - b.z)
 
-  // Draw central prism
-  drawCentralPrism(ctx, centerX, centerY, params.prismInt)
+  // Draw central prism (dimmer in lattice mode)
+  const prismIntensity = params.lattice?.enabled ? params.prismInt * 0.3 : params.prismInt
+  drawCentralPrism(ctx, centerX, centerY, prismIntensity)
 
-  // Draw beams from center to nodes
-  for (const node of sorted) {
-    drawBeam(ctx, node, centerX, centerY, radius, params)
-  }
+  // LATTICE MODE: Draw edges and vertices
+  if (params.lattice?.enabled && edges && edges.length > 0) {
+    // Sort edges by average z-depth
+    const sortedEdges = [...edges].sort((a, b) => {
+      const azAvg = (nodes[a.a].z + nodes[a.b].z) / 2
+      const bzAvg = (nodes[b.a].z + nodes[b.b].z) / 2
+      return azAvg - bzAvg
+    })
+    
+    // Draw edges
+    for (const edge of sortedEdges) {
+      drawLatticeEdge(ctx, edge, nodes, centerX, centerY, radius, params)
+    }
+    
+    // Draw vertices (only nodes that are part of edges)
+    const vertexSet = new Set<number>()
+    for (const edge of edges) {
+      vertexSet.add(edge.a)
+      vertexSet.add(edge.b)
+    }
+    
+    const vertices = sorted.filter(n => vertexSet.has(n.idx))
+    for (const node of vertices) {
+      drawLatticeVertex(ctx, node, centerX, centerY, radius, params)
+    }
+  } else {
+    // STANDARD MODE: Draw beams and nodes
+    // Draw beams from center to nodes
+    for (const node of sorted) {
+      drawBeam(ctx, node, centerX, centerY, radius, params)
+    }
 
-  // Draw nodes
-  for (const node of sorted) {
-    drawNode(ctx, node, centerX, centerY, radius, params)
+    // Draw nodes
+    for (const node of sorted) {
+      drawNode(ctx, node, centerX, centerY, radius, params)
+    }
   }
 }

@@ -2,13 +2,26 @@
 // NOTHINGBURGER ENGINE — Constants
 // ═══════════════════════════════════════════════════════════════
 
-import type { PrismParameters, PrismPreset } from './types'
+import type { PrismParameters, PrismPreset, LatticeParameters } from './types'
 
 // Golden ratio for Fibonacci sphere distribution
 export const GOLDEN_RATIO = (1 + Math.sqrt(5)) / 2
 
 // Default node count for the sphere
 export const DEFAULT_NODE_COUNT = 1000
+
+// Default lattice parameters
+export const DEFAULT_LATTICE: LatticeParameters = {
+  enabled: false,
+  base: 'tri',
+  shape: 'sphere',
+  shells: 16,
+  edgeWidth: 1.5,
+  edgeOpacity: 0.7,
+  static: false,
+  collapse: 0,
+  innerGlow: 0.5,
+}
 
 // Default engine parameters
 export const DEFAULT_PARAMETERS: PrismParameters = {
@@ -30,6 +43,7 @@ export const DEFAULT_PARAMETERS: PrismParameters = {
   gr: 10,
   ba: 0.04,
   shapeTxt: '',
+  lattice: DEFAULT_LATTICE,
 }
 
 // Visual presets
@@ -170,6 +184,40 @@ export const PRESETS: PrismPreset[] = [
       dr: 2.0,
       gr: 20,
       ba: 0.1,
+    },
+  },
+  {
+    name: 'v0-lattice',
+    label: 'v0',
+    params: {
+      tau: 0.15,
+      shapeScale: 1,
+      refIdx: 1.52,
+      dispersion: 0.03,
+      prismInt: 0.3,
+      rx: 0,
+      ry: 0.15,
+      rz: 0,
+      bc: 600,
+      bw: 1.0,
+      bo: 0.4,
+      pattern: 'all',
+      harmK: 1,
+      phaseV: 0.5,
+      dr: 2.5,
+      gr: 8,
+      ba: 0.02,
+      lattice: {
+        enabled: true,
+        base: 'tri',
+        shape: 'v0',
+        shells: 24,
+        edgeWidth: 2.0,
+        edgeOpacity: 0.85,
+        static: false,
+        collapse: 0,
+        innerGlow: 0.8,
+      },
     },
   },
 ]
