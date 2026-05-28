@@ -46,7 +46,8 @@ export function isNodeInShape(
   if (!shapeMask) return true // No shape = all visible
 
   // Map sphere surface (theta, phi) to texture UV
-  const u = ((node.phi / (2 * Math.PI)) % 1 + 1) % 1
+  // Flip U to correct text direction (left-to-right)
+  const u = 1 - (((node.phi / (2 * Math.PI)) % 1 + 1) % 1)
   const v = node.theta / Math.PI
 
   // Apply scale from center
