@@ -169,7 +169,7 @@ export function PrismControlPanel({
             backgroundClip: 'text',
           }}
         >
-          NOTHINGBURGER ENGINE
+          MATH DISCO ENGINE
         </div>
         <div className="text-[8px] text-white/30 text-center tracking-[2px] mb-3.5">
           PRISMATIC POV
