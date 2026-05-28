@@ -193,10 +193,16 @@ export function usePrismEngine(
         node.b = cb
 
         if (isVolumetric) {
-          // Volumetric mode: light projection determines intensity
-          // Intensity is already set during shell creation
-          // Just apply light projection updates
-          beamCount++
+          // Volumetric mode: apply text shape mask if present
+          const inShape = isNodeInShape(node, shapeMaskRef.current, P.shapeScale)
+          if (shapeMaskRef.current && P.shapeTxt) {
+            // Text mask is active - use it to control visibility
+            node.intensity = inShape ? 0.8 + node.z * 0.2 : 0.0
+          } else {
+            // No text mask - show all nodes with depth-based intensity
+            node.intensity = 0.5 + node.z * 0.3
+          }
+          if (node.intensity > 0.1) beamCount++
         } else {
           // Standard mode: beam pattern and shape mask
           const bp = calculateBeamPattern(node, P.pattern, state.t, P, nodeCount)
