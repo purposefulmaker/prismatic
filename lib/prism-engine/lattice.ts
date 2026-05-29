@@ -12,30 +12,40 @@ import { GOLDEN_RATIO } from './constants'
 // Negative = inside, Positive = outside
 
 /**
+ * 2D equilateral triangle SDF (Inigo Quilez), pointing UP.
+ * r is the triangle "radius". Returns negative inside.
+ */
+function sdEquilateralTriangle(x: number, y: number, r: number): number {
+  const k = Math.sqrt(3.0)
+  let px = Math.abs(x) - r
+  let py = y + r / k
+  // The fold step that makes this an actual triangle (was missing before)
+  if (px + k * py > 0.0) {
+    const nx = (px - k * py) / 2.0
+    const ny = (-k * px - py) / 2.0
+    px = nx
+    py = ny
+  }
+  px -= Math.clamp(px, -2.0 * r, 0.0)
+  return -Math.sqrt(px * px + py * py) * Math.sign(py)
+}
+
+/**
  * v0 Triangle Prism SDF
- * Extruded triangle with the Vercel aesthetic
+ * Correct extruded equilateral triangle (the Vercel mark), pointing up.
  */
 function sdfV0Prism(x: number, y: number, z: number): number {
-  // Triangle in XY plane, extruded along Z
-  const depth = 0.4 // How thick the prism is
-  
-  // Equilateral triangle pointing up
-  const scale = 0.75
-  const k = Math.sqrt(3.0)
-  
-  // Transform to triangle space
-  let px = Math.abs(x) * scale
-  let py = y * scale - 0.1 // Shift down slightly
-  
-  // Triangle SDF in 2D
-  px = px - Math.min(px, 0.5)
-  py = py - Math.clamp(py, -0.5 * k, 0.0)
-  const d2d = -Math.sqrt(px * px + py * py) * Math.sign(py + px * k)
-  
+  const depth = 0.32 // half-thickness of the prism along Z
+  const r = 0.78 // triangle radius
+
+  // Triangle lives in the XY plane; nudge down so it's visually centered
+  const d2d = sdEquilateralTriangle(x, y - 0.05, r)
+
   // Extrude along Z
   const dz = Math.abs(z) - depth
-  
-  return Math.max(d2d / scale, dz)
+
+  // Round CSG intersection of the 2D triangle and the slab
+  return Math.max(d2d, dz)
 }
 
 /**

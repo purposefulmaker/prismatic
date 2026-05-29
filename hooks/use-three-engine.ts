@@ -200,12 +200,17 @@ export function useThreeEngine(
           // text sits on the camera-facing face; rotating shapes wrap it
           // around the sphere surface via spherical UV mapping.
           if (shapeMaskRef.current && P.shapeTxt) {
-            const inText = isStatic
-              ? isNodeInPlanarShape(node, shapeMaskRef.current, P.shapeScale)
-              : isNodeInShape(node, shapeMaskRef.current, P.shapeScale)
-            // Text glows bright; the rest of the shape stays dimly visible
-            // so you can still read the triangle outline behind the letters.
-            node.intensity = inText ? 0.95 : 0.16
+            if (isStatic) {
+              // Static: only light text on the FRONT face (oz > 0) so the
+              // letters don't ghost through from the back of the prism.
+              const onFrontFace = node.oz > 0.05
+              const inText =
+                onFrontFace && isNodeInPlanarShape(node, shapeMaskRef.current, P.shapeScale)
+              node.intensity = inText ? 1.0 : 0.14
+            } else {
+              const inText = isNodeInShape(node, shapeMaskRef.current, P.shapeScale)
+              node.intensity = inText ? 0.95 : 0.16
+            }
           } else {
             node.intensity = 0.5 + node.z * 0.3
           }

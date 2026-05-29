@@ -41,9 +41,7 @@ export function usePrismParameters(
   }, [])
 
   const applyPreset = useCallback((presetName: string) => {
-    console.log('[v0] applyPreset called with:', presetName)
     const preset = PRESETS.find(p => p.name === presetName)
-    console.log('[v0] preset found:', preset?.name, 'has lattice:', !!preset?.params.lattice)
     if (preset) {
       setParamsState(prev => {
         const newParams = { ...prev, ...preset.params }
@@ -51,7 +49,6 @@ export function usePrismParameters(
         if (preset.params.lattice) {
           newParams.lattice = { ...prev.lattice, ...preset.params.lattice }
         }
-        console.log('[v0] new params tau:', newParams.tau, 'ry:', newParams.ry, 'lattice.enabled:', newParams.lattice.enabled)
         return newParams
       })
     }

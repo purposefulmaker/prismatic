@@ -24,9 +24,20 @@ export function createShapeMask(
   ctx.fillStyle = '#000'
   ctx.fillRect(0, 0, 256, 128)
   ctx.fillStyle = '#fff'
-  ctx.font = 'bold 80px Courier New'
+
+  // Fit the text to the canvas width so it stays bold and readable even
+  // for short strings like "v0". Start large, shrink until it fits.
+  let fontSize = 96
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
+  do {
+    ctx.font = `900 ${fontSize}px Arial, sans-serif`
+    const w = ctx.measureText(txt).width
+    if (w <= 220) break
+    fontSize -= 4
+  } while (fontSize > 24)
+
+  ctx.font = `900 ${fontSize}px Arial, sans-serif`
   ctx.fillText(txt, 128, 64)
 
   // Extract image data
@@ -79,9 +90,12 @@ export function isNodeInPlanarShape(
   if (!shapeMask) return true // No shape = all visible
 
   // Use ORIGINAL (untransformed) XY so the text stays locked to the face.
-  // Map XY range (~±0.9) into texture UV space, centered.
-  const u = 0.5 + node.ox * 0.55 * shapeScale
-  const v = 0.5 - node.oy * 0.7 * shapeScale // flip Y (texture is top-down)
+  // The texture is 256×128 (2:1), so the horizontal node→UV rate must be HALF
+  // the vertical rate to keep letters from stretching. We pick a base vertical
+  // scale and derive the horizontal one as base/2 for aspect-correct text.
+  const base = 0.85 * shapeScale
+  const u = 0.5 + node.ox * (base * 0.5)
+  const v = 0.5 - node.oy * base // flip Y (texture is top-down)
 
   if (u < 0 || u > 1 || v < 0 || v > 1) return false
 
