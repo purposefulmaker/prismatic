@@ -15,7 +15,7 @@ import {
   renderThreeFrame,
   disposeThreeScene,
 } from '@/lib/prism-engine'
-import { createShapeMask, isNodeInShape } from '@/lib/prism-engine/shape-mask'
+import { createShapeMask, isNodeInShape, isNodeInPlanarShape } from '@/lib/prism-engine/shape-mask'
 
 export interface UseThreeEngineOptions {
   nodeCount?: number
@@ -152,13 +152,26 @@ export function useThreeEngine(
 
       state.t += dt
 
-      // Calculate rotation from params + drag
-      const arx = (P.rx + drag.y * 0.001) * state.t
-      const ary = (P.ry + drag.x * 0.001) * state.t
-      const arz = P.rz * state.t
+      // Static lattice mode: freeze auto-rotation so the shape faces the
+      // camera. Drag still applies as a fixed orientation offset.
+      const isStatic = !!(P.lattice?.enabled && P.lattice.static)
 
-      // Breathing animation
-      const breath = 1 + Math.sin(state.t * 1.5) * P.ba
+      let arx: number
+      let ary: number
+      let arz: number
+      if (isStatic) {
+        arx = drag.y * 0.005
+        ary = drag.x * 0.005
+        arz = 0
+      } else {
+        // Calculate rotation from params + drag
+        arx = (P.rx + drag.y * 0.001) * state.t
+        ary = (P.ry + drag.x * 0.001) * state.t
+        arz = P.rz * state.t
+      }
+
+      // Breathing animation (no breathing when static for a stable shape)
+      const breath = isStatic ? 1 : 1 + Math.sin(state.t * 1.5) * P.ba
 
       // Choose which node set to use
       const isVolumetric = P.lattice?.enabled && volumetricNodesRef.current.length > 0
@@ -182,10 +195,17 @@ export function useThreeEngine(
         node.b = cb
 
         if (isVolumetric) {
-          // Volumetric mode: apply text shape mask if present
-          const inShape = isNodeInShape(node, shapeMaskRef.current, P.shapeScale)
+          // Volumetric mode: project text onto the shape.
+          // Static shapes (e.g. v0 triangle) use FLAT planar projection so the
+          // text sits on the camera-facing face; rotating shapes wrap it
+          // around the sphere surface via spherical UV mapping.
           if (shapeMaskRef.current && P.shapeTxt) {
-            node.intensity = inShape ? 0.8 + node.z * 0.2 : 0.0
+            const inText = isStatic
+              ? isNodeInPlanarShape(node, shapeMaskRef.current, P.shapeScale)
+              : isNodeInShape(node, shapeMaskRef.current, P.shapeScale)
+            // Text glows bright; the rest of the shape stays dimly visible
+            // so you can still read the triangle outline behind the letters.
+            node.intensity = inText ? 0.95 : 0.16
           } else {
             node.intensity = 0.5 + node.z * 0.3
           }

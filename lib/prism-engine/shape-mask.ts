@@ -64,3 +64,33 @@ export function isNodeInShape(
   const idx = (py * 256 + px) * 4
   return shapeMask[idx] > 128
 }
+
+/**
+ * Check if a node falls within the shape mask using FLAT planar projection.
+ * Maps the node's original XY position directly onto the texture, so text
+ * appears on the face of a static, camera-facing shape (e.g. the v0 triangle)
+ * rather than wrapped around a sphere.
+ */
+export function isNodeInPlanarShape(
+  node: PrismNode,
+  shapeMask: Uint8ClampedArray | null,
+  shapeScale: number
+): boolean {
+  if (!shapeMask) return true // No shape = all visible
+
+  // Use ORIGINAL (untransformed) XY so the text stays locked to the face.
+  // Map XY range (~±0.9) into texture UV space, centered.
+  const u = 0.5 + node.ox * 0.55 * shapeScale
+  const v = 0.5 - node.oy * 0.7 * shapeScale // flip Y (texture is top-down)
+
+  if (u < 0 || u > 1 || v < 0 || v > 1) return false
+
+  const px = Math.floor(u * 256)
+  const py = Math.floor(v * 128)
+
+  if (px < 0 || px >= 256 || py < 0 || py >= 128) return false
+
+  // Check pixel brightness (R channel)
+  const idx = (py * 256 + px) * 4
+  return shapeMask[idx] > 128
+}
