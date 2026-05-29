@@ -126,6 +126,37 @@ void main() {
 }
 `
 
+// Fullscreen tone-mapping pass — compresses HDR highlights (ACES filmic)
+// so dense additive regions keep their color/pattern instead of clipping to white.
+const TONE_VERTEX = `
+varying vec2 vUv;
+void main() {
+  vUv = uv;
+  gl_Position = vec4(position, 1.0);
+}
+`
+
+const TONE_FRAGMENT = `
+precision highp float;
+uniform sampler2D tScene;
+uniform float uExposure;
+uniform float uWhite;
+varying vec2 vUv;
+
+// Extended Reinhard tone mapping applied to LUMINANCE only.
+// Color ratios (hue/saturation) are preserved, so dense additive regions
+// keep their spectral color instead of clipping to flat white. uWhite sets
+// the luminance that maps to pure white.
+void main() {
+  vec3 hdr = texture2D(tScene, vUv).rgb * uExposure;
+  float luma = dot(hdr, vec3(0.2126, 0.7152, 0.0722));
+  float w2 = uWhite * uWhite;
+  float mappedLuma = (luma * (1.0 + luma / w2)) / (1.0 + luma);
+  vec3 mapped = hdr * (mappedLuma / max(luma, 1e-4));
+  gl_FragColor = vec4(clamp(mapped, 0.0, 1.0), 1.0);
+}
+`
+
 // ─── Three.js Scene Setup ───
 
 export interface ThreeScene {
@@ -146,9 +177,17 @@ export interface ThreeScene {
   beamPositions: Float32Array
   beamColors: Float32Array
   beamAlphas: Float32Array
+  // HDR tone-mapping pass
+  rt: THREE.WebGLRenderTarget
+  postScene: THREE.Scene
+  postCamera: THREE.OrthographicCamera
+  toneMaterial: THREE.ShaderMaterial
   zoom: number
   camDist: number
   viewWidth: number
+  viewHeight: number
+  canvasWidth: number
+  canvasHeight: number
 }
 
 const FOV = 50
@@ -159,6 +198,7 @@ export function createThreeScene(canvas: HTMLCanvasElement, nodeCount: number): 
   // Renderer
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false })
   renderer.setClearColor(0x000000, 1)
+  renderer.autoClear = false
 
   // Scene and camera
   const scene = new THREE.Scene()
@@ -307,6 +347,37 @@ export function createThreeScene(canvas: HTMLCanvasElement, nodeCount: number): 
 
   scene.add(new THREE.Points(starGeometry, starMaterial))
 
+  // ─── HDR render target + tone-mapping post pass ───
+  const dpr0 = Math.min(window.devicePixelRatio || 1, 2)
+  const rt = new THREE.WebGLRenderTarget(
+    Math.max(2, Math.floor(window.innerWidth * dpr0)),
+    Math.max(2, Math.floor(window.innerHeight * dpr0)),
+    {
+      type: THREE.HalfFloatType,
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.LinearFilter,
+      depthBuffer: false,
+      stencilBuffer: false,
+    }
+  )
+
+  const toneMaterial = new THREE.ShaderMaterial({
+    vertexShader: TONE_VERTEX,
+    fragmentShader: TONE_FRAGMENT,
+    uniforms: {
+      tScene: { value: rt.texture },
+      uExposure: { value: 1.0 },
+      uWhite: { value: 3.0 },
+    },
+    depthTest: false,
+    depthWrite: false,
+  })
+
+  const postScene = new THREE.Scene()
+  const postCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
+  const postQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), toneMaterial)
+  postScene.add(postQuad)
+
   return {
     renderer,
     scene,
@@ -325,9 +396,16 @@ export function createThreeScene(canvas: HTMLCanvasElement, nodeCount: number): 
     beamPositions,
     beamColors,
     beamAlphas,
+    rt,
+    postScene,
+    postCamera,
+    toneMaterial,
     zoom: 1,
     camDist: 4,
     viewWidth: window.innerWidth,
+    viewHeight: window.innerHeight,
+    canvasWidth: window.innerWidth,
+    canvasHeight: window.innerHeight,
   }
 }
 
@@ -343,6 +421,15 @@ export function updateViewport(
 
   const panelW = panelHidden ? 0 : 300
   threeScene.viewWidth = Math.max(60, width - panelW)
+  threeScene.viewHeight = height
+  threeScene.canvasWidth = width
+  threeScene.canvasHeight = height
+
+  // Resize HDR render target to match drawing-buffer pixels of the view region
+  threeScene.rt.setSize(
+    Math.max(2, Math.floor(threeScene.viewWidth * dpr)),
+    Math.max(2, Math.floor(height * dpr))
+  )
 
   threeScene.camera.aspect = threeScene.viewWidth / height
   threeScene.camera.updateProjectionMatrix()
@@ -462,8 +549,24 @@ export function renderThreeFrame(
   // Star twinkle
   starMaterial.uniforms.t.value = time
 
-  // Render
+  const { rt, postScene, postCamera, viewWidth, viewHeight, canvasWidth, canvasHeight } = threeScene
+  const dpr = renderer.getPixelRatio()
+
+  // ── Pass 1: render scene into HDR float buffer ──
+  renderer.setRenderTarget(rt)
+  renderer.setViewport(0, 0, viewWidth * dpr, viewHeight * dpr)
+  renderer.setClearColor(0x000000, 1)
+  renderer.clear()
   renderer.render(scene, camera)
+
+  // ── Pass 2: tone-map HDR buffer to the screen ──
+  renderer.setRenderTarget(null)
+  // Clear the full canvas to black (keeps area behind the panel dark)
+  renderer.setViewport(0, 0, canvasWidth, canvasHeight)
+  renderer.clear()
+  // Draw tone-mapped result only into the visible view region
+  renderer.setViewport(0, 0, viewWidth, viewHeight)
+  renderer.render(postScene, postCamera)
 
   return beamIndex
 }
@@ -476,4 +579,6 @@ export function disposeThreeScene(threeScene: ThreeScene): void {
   threeScene.beamMaterial.dispose()
   threeScene.prismMaterial.dispose()
   threeScene.starMaterial.dispose()
+  threeScene.toneMaterial.dispose()
+  threeScene.rt.dispose()
 }
