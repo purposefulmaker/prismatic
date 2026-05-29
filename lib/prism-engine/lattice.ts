@@ -36,15 +36,16 @@ function sdEquilateralTriangle(x: number, y: number, r: number): number {
  */
 function sdfV0Prism(x: number, y: number, z: number): number {
   const depth = 0.32 // half-thickness of the prism along Z
-  const r = 0.78 // triangle radius
+  const r = 0.82 // triangle radius
 
-  // Triangle lives in the XY plane; nudge down so it's visually centered
-  const d2d = sdEquilateralTriangle(x, y - 0.05, r)
+  // Triangle lives in the XY plane. Negate Y so the apex points UP (the
+  // Vercel mark ▲); small +Y shift keeps it vertically centered in view.
+  const d2d = sdEquilateralTriangle(x, -y + 0.08, r)
 
   // Extrude along Z
   const dz = Math.abs(z) - depth
 
-  // Round CSG intersection of the 2D triangle and the slab
+  // CSG intersection of the 2D triangle and the slab
   return Math.max(d2d, dz)
 }
 

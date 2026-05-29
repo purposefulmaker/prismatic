@@ -232,7 +232,9 @@ export function useThreeEngine(
       fpsCounterRef.current.count++
       if (timestamp - fpsCounterRef.current.lastTime >= 1000) {
         const fps = fpsCounterRef.current.count
-        const rpm = ((P.ry + drag.x * 0.001) / (Math.PI * 2)) * 60
+        // In static mode the shape does not auto-rotate, so report 0 RPM
+        // (drag only applies a fixed orientation offset, not continuous spin).
+        const rpm = isStatic ? 0 : ((P.ry + drag.x * 0.001) / (Math.PI * 2)) * 60
         setStats({
           nodeCount: activeNodes.length,
           activeBeams: beamCount,
