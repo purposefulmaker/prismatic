@@ -27,6 +27,9 @@ export { drawCentralPrism, drawBeam, drawNode, drawLatticeEdge, drawLatticeVerte
 // Shape Mask
 export { createShapeMask, isNodeInShape } from './shape-mask'
 
+// Color Resolution
+export { resolveNodeColor, hexToRGB, rgbToHex } from './color'
+
 // Lattice / Volumetric Shells
 export { 
   createVolumetricShells, 

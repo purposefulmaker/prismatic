@@ -1,8 +1,16 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import type { BeamPattern, PrismParameters, LatticeBase, LatticeShape } from '@/lib/prism-engine'
-import { PRESETS } from '@/lib/prism-engine'
+import type {
+  BeamPattern,
+  PrismParameters,
+  LatticeBase,
+  LatticeShape,
+  ColorMode,
+  ColorParameters,
+  GradientAxis,
+} from '@/lib/prism-engine'
+import { PRESETS, COLOR_PALETTES, COLOR_GRADIENTS } from '@/lib/prism-engine'
 
 // ─── Section Component ───
 function Section({
@@ -101,6 +109,279 @@ function PatternButton({
   )
 }
 
+// ─── Color Swatch (editable native color input) ───
+function ColorSwatch({
+  color,
+  onChange,
+  size = 'md',
+  onRemove,
+}: {
+  color: string
+  onChange: (hex: string) => void
+  size?: 'sm' | 'md'
+  onRemove?: () => void
+}) {
+  const dim = size === 'sm' ? 'w-6 h-6' : 'w-8 h-8'
+  return (
+    <div className="relative group">
+      <label
+        className={cn(
+          dim,
+          'block rounded-sm border border-white/20 cursor-pointer overflow-hidden',
+          'hover:border-white/50 transition-all'
+        )}
+        style={{ backgroundColor: color }}
+      >
+        <input
+          type="color"
+          value={color}
+          onChange={e => onChange(e.target.value)}
+          className="opacity-0 w-full h-full cursor-pointer"
+        />
+      </label>
+      {onRemove && (
+        <button
+          onClick={onRemove}
+          className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-black border border-white/30
+            text-white/70 text-[8px] leading-none flex items-center justify-center opacity-0
+            group-hover:opacity-100 transition-opacity hover:bg-red-900/80"
+          aria-label="Remove color"
+        >
+          ×
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ─── Small preset button (for palette/gradient presets) ───
+function SwatchPreset({
+  colors,
+  label,
+  gradient,
+  onClick,
+}: {
+  colors: string[]
+  label: string
+  gradient?: boolean
+  onClick: () => void
+}) {
+  const bg = gradient
+    ? `linear-gradient(90deg, ${colors.join(', ')})`
+    : undefined
+  return (
+    <button
+      onClick={onClick}
+      className="flex-1 min-w-[60px] rounded-sm border border-white/10 overflow-hidden
+        hover:border-white/40 transition-all"
+      title={label}
+    >
+      {gradient ? (
+        <div className="h-4 w-full" style={{ background: bg }} />
+      ) : (
+        <div className="flex h-4 w-full">
+          {colors.map((c, i) => (
+            <div key={i} className="flex-1" style={{ backgroundColor: c }} />
+          ))}
+        </div>
+      )}
+      <div className="text-[7px] tracking-[1px] text-white/50 text-center py-0.5">{label}</div>
+    </button>
+  )
+}
+
+// ─── Color Mode Section ───
+function ColorSection({
+  color,
+  onColorChange,
+}: {
+  color: ColorParameters
+  onColorChange: <K extends keyof ColorParameters>(key: K, value: ColorParameters[K]) => void
+}) {
+  const modes: { name: ColorMode; label: string }[] = [
+    { name: 'spectrum', label: 'SPECTRUM' },
+    { name: 'single', label: 'SINGLE' },
+    { name: 'palette', label: 'PALETTE' },
+    { name: 'gradient', label: 'GRADIENT' },
+  ]
+
+  const axes: { name: GradientAxis; label: string }[] = [
+    { name: 'y', label: 'VERT' },
+    { name: 'x', label: 'HORIZ' },
+    { name: 'z', label: 'DEPTH' },
+    { name: 'radial', label: 'RADIAL' },
+  ]
+
+  const updatePaletteColor = (idx: number, hex: string) => {
+    const next = [...color.palette]
+    next[idx] = hex
+    onColorChange('palette', next)
+  }
+  const addPaletteColor = () => {
+    if (color.palette.length < 8) onColorChange('palette', [...color.palette, '#ffffff'])
+  }
+  const removePaletteColor = (idx: number) => {
+    if (color.palette.length > 1) {
+      onColorChange('palette', color.palette.filter((_, i) => i !== idx))
+    }
+  }
+
+  const updateGradientColor = (idx: number, hex: string) => {
+    const next = [...color.gradient]
+    next[idx] = hex
+    onColorChange('gradient', next)
+  }
+  const addGradientColor = () => {
+    if (color.gradient.length < 5) onColorChange('gradient', [...color.gradient, '#ffffff'])
+  }
+  const removeGradientColor = (idx: number) => {
+    if (color.gradient.length > 2) {
+      onColorChange('gradient', color.gradient.filter((_, i) => i !== idx))
+    }
+  }
+
+  return (
+    <Section title="◐ COLOR">
+      {/* Mode selector */}
+      <ButtonGroup>
+        {modes.slice(0, 2).map(m => (
+          <PatternButton
+            key={m.name}
+            label={m.label}
+            active={color.mode === m.name}
+            onClick={() => onColorChange('mode', m.name)}
+          />
+        ))}
+      </ButtonGroup>
+      <ButtonGroup>
+        {modes.slice(2).map(m => (
+          <PatternButton
+            key={m.name}
+            label={m.label}
+            active={color.mode === m.name}
+            onClick={() => onColorChange('mode', m.name)}
+          />
+        ))}
+      </ButtonGroup>
+
+      {/* SINGLE mode */}
+      {color.mode === 'single' && (
+        <div className="mt-3 flex items-center gap-2">
+          <ColorSwatch color={color.single} onChange={v => onColorChange('single', v)} />
+          <span className="text-[9px] text-white/50 font-mono uppercase">{color.single}</span>
+        </div>
+      )}
+
+      {/* PALETTE mode */}
+      {color.mode === 'palette' && (
+        <div className="mt-3">
+          <div className="text-[8px] text-white/35 mb-1.5">DOT COLORS (tap to edit)</div>
+          <div className="flex gap-1.5 flex-wrap items-center">
+            {color.palette.map((c, i) => (
+              <ColorSwatch
+                key={i}
+                color={c}
+                size="sm"
+                onChange={v => updatePaletteColor(i, v)}
+                onRemove={color.palette.length > 1 ? () => removePaletteColor(i) : undefined}
+              />
+            ))}
+            {color.palette.length < 8 && (
+              <button
+                onClick={addPaletteColor}
+                className="w-6 h-6 rounded-sm border border-dashed border-white/25 text-white/40
+                  text-xs leading-none hover:border-white/50 hover:text-white/70 transition-all"
+                aria-label="Add color"
+              >
+                +
+              </button>
+            )}
+          </div>
+          <div className="text-[8px] text-white/35 mb-1.5 mt-3">PRESETS</div>
+          <div className="flex gap-1 flex-wrap">
+            {COLOR_PALETTES.map(p => (
+              <SwatchPreset
+                key={p.name}
+                colors={p.colors}
+                label={p.name}
+                onClick={() => onColorChange('palette', [...p.colors])}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* GRADIENT mode */}
+      {color.mode === 'gradient' && (
+        <div className="mt-3">
+          <div className="text-[8px] text-white/35 mb-1.5">GRADIENT STOPS</div>
+          {/* Preview bar */}
+          <div
+            className="h-3 w-full rounded-sm border border-white/10 mb-2"
+            style={{ background: `linear-gradient(90deg, ${color.gradient.join(', ')})` }}
+          />
+          <div className="flex gap-1.5 flex-wrap items-center">
+            {color.gradient.map((c, i) => (
+              <ColorSwatch
+                key={i}
+                color={c}
+                size="sm"
+                onChange={v => updateGradientColor(i, v)}
+                onRemove={color.gradient.length > 2 ? () => removeGradientColor(i) : undefined}
+              />
+            ))}
+            {color.gradient.length < 5 && (
+              <button
+                onClick={addGradientColor}
+                className="w-6 h-6 rounded-sm border border-dashed border-white/25 text-white/40
+                  text-xs leading-none hover:border-white/50 hover:text-white/70 transition-all"
+                aria-label="Add stop"
+              >
+                +
+              </button>
+            )}
+          </div>
+
+          <div className="text-[8px] text-white/35 mb-1.5 mt-3">MAP ALONG AXIS</div>
+          <ButtonGroup>
+            {axes.map(a => (
+              <PatternButton
+                key={a.name}
+                label={a.label}
+                active={color.gradientAxis === a.name}
+                onClick={() => onColorChange('gradientAxis', a.name)}
+              />
+            ))}
+          </ButtonGroup>
+
+          <div className="text-[8px] text-white/35 mb-1.5 mt-3">PRESETS</div>
+          <div className="flex gap-1 flex-wrap">
+            {COLOR_GRADIENTS.map(g => (
+              <SwatchPreset
+                key={g.name}
+                colors={g.colors}
+                label={g.name}
+                gradient
+                onClick={() => onColorChange('gradient', [...g.colors])}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Saturation (applies to all modes) */}
+      <ControlRow label="Saturation" value={color.saturation.toFixed(2)}>
+        <PrismSlider
+          value={color.saturation * 100}
+          min={0}
+          max={150}
+          onChange={v => onColorChange('saturation', v / 100)}
+        />
+      </ControlRow>
+    </Section>
+  )
+}
+
 // ─── Main Control Panel ───
 export interface PrismControlPanelProps {
   params: PrismParameters
@@ -109,6 +390,7 @@ export interface PrismControlPanelProps {
   onPresetApply: (presetName: string) => void
   onShapeTextChange: (text: string) => void
   onLatticeChange: <K extends keyof PrismParameters['lattice']>(key: K, value: PrismParameters['lattice'][K]) => void
+  onColorChange: <K extends keyof ColorParameters>(key: K, value: ColorParameters[K]) => void
   isOpen: boolean
   onToggle: () => void
   className?: string
@@ -121,6 +403,7 @@ export function PrismControlPanel({
   onPresetApply,
   onShapeTextChange,
   onLatticeChange,
+  onColorChange,
   isOpen,
   onToggle,
   className,
@@ -223,6 +506,9 @@ export function PrismControlPanel({
             />
           </ControlRow>
         </Section>
+
+        {/* Color Mode */}
+        <ColorSection color={params.color} onColorChange={onColorChange} />
 
         {/* Lattice Mode */}
         <Section title="◆ LATTICE MODE">

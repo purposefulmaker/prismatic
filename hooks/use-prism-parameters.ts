@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useRef, useState } from 'react'
-import type { PrismParameters, PrismPreset, BeamPattern, LatticeParameters } from '@/lib/prism-engine'
+import type { PrismParameters, PrismPreset, BeamPattern, LatticeParameters, ColorParameters } from '@/lib/prism-engine'
 import { DEFAULT_PARAMETERS, PRESETS } from '@/lib/prism-engine'
 
 export interface UsePrismParametersReturn {
@@ -12,6 +12,7 @@ export interface UsePrismParametersReturn {
   setPattern: (pattern: BeamPattern) => void
   setShapeText: (text: string) => void
   setLatticeParam: <K extends keyof LatticeParameters>(key: K, value: LatticeParameters[K]) => void
+  setColorParam: <K extends keyof ColorParameters>(key: K, value: ColorParameters[K]) => void
   presets: PrismPreset[]
   resetToDefaults: () => void
 }
@@ -68,6 +69,13 @@ export function usePrismParameters(
     }))
   }, [])
 
+  const setColorParam = useCallback(<K extends keyof ColorParameters>(key: K, value: ColorParameters[K]) => {
+    setParamsState(prev => ({
+      ...prev,
+      color: { ...prev.color, [key]: value },
+    }))
+  }, [])
+
   const resetToDefaults = useCallback(() => {
     setParamsState(DEFAULT_PARAMETERS)
   }, [])
@@ -80,6 +88,7 @@ export function usePrismParameters(
     setPattern,
     setShapeText,
     setLatticeParam,
+    setColorParam,
     presets: PRESETS,
     resetToDefaults,
   }

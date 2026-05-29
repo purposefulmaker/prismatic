@@ -2,13 +2,43 @@
 // NOTHINGBURGER ENGINE — Constants
 // ═══════════════════════════════════════════════════════════════
 
-import type { PrismParameters, PrismPreset, LatticeParameters } from './types'
+import type { PrismParameters, PrismPreset, LatticeParameters, ColorParameters } from './types'
 
 // Golden ratio for Fibonacci sphere distribution
 export const GOLDEN_RATIO = (1 + Math.sqrt(5)) / 2
 
 // Default node count for the sphere
 export const DEFAULT_NODE_COUNT = 1000
+
+// Default color parameters (spectrum = physics-based, original behavior)
+export const DEFAULT_COLOR: ColorParameters = {
+  mode: 'spectrum',
+  single: '#00e5ff',
+  palette: ['#ff0066', '#ffaa00', '#00e5ff', '#22ff88'],
+  gradient: ['#ff00aa', '#7a00ff', '#00e5ff'],
+  gradientAxis: 'y',
+  saturation: 1,
+}
+
+// Curated palette presets (discrete confetti colors)
+export const COLOR_PALETTES: { name: string; colors: string[] }[] = [
+  { name: 'NEON', colors: ['#ff0066', '#ffaa00', '#00e5ff', '#22ff88'] },
+  { name: 'EMBER', colors: ['#ff3300', '#ff7700', '#ffcc00', '#ffee88'] },
+  { name: 'OCEAN', colors: ['#003f88', '#0077b6', '#00b4d8', '#90e0ef'] },
+  { name: 'CANDY', colors: ['#ff5d8f', '#ff9ec6', '#a06cd5', '#5fffd0'] },
+  { name: 'MONO', colors: ['#ffffff', '#bbbbbb', '#777777'] },
+  { name: 'GOLD', colors: ['#3a2a00', '#8a6d00', '#d4af37', '#fff1b8'] },
+]
+
+// Curated gradient presets (smooth interpolation stops)
+export const COLOR_GRADIENTS: { name: string; colors: string[] }[] = [
+  { name: 'PLASMA', colors: ['#ff00aa', '#7a00ff', '#00e5ff'] },
+  { name: 'SUNSET', colors: ['#ffd200', '#ff7b00', '#ff006e'] },
+  { name: 'AURORA', colors: ['#00ff9d', '#00e5ff', '#7a5cff'] },
+  { name: 'FIRE', colors: ['#fff200', '#ff6a00', '#d00000'] },
+  { name: 'ICE', colors: ['#ffffff', '#90e0ef', '#0077b6'] },
+  { name: 'GHOST', colors: ['#ffffff', '#8899ff', '#1a1a3a'] },
+]
 
 // Default lattice parameters
 export const DEFAULT_LATTICE: LatticeParameters = {
@@ -44,6 +74,7 @@ export const DEFAULT_PARAMETERS: PrismParameters = {
   ba: 0.04,
   shapeTxt: '',
   lattice: DEFAULT_LATTICE,
+  color: DEFAULT_COLOR,
 }
 
 // Visual presets

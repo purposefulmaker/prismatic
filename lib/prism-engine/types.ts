@@ -64,9 +64,34 @@ export interface PrismParameters {
   shapeTxt: string
   // Lattice mode parameters
   lattice: LatticeParameters
+  // Color mode parameters
+  color: ColorParameters
 }
 
 export type BeamPattern = 'dft' | 'gabor' | 'helix' | 'sinc' | 'fib' | 'all'
+
+// ═══════════════════════════════════════════════════════════════
+// COLOR MODE — Swatches · Palettes · Gradients
+// ═══════════════════════════════════════════════════════════════
+
+export type ColorMode = 'spectrum' | 'single' | 'palette' | 'gradient'
+
+export type GradientAxis = 'y' | 'x' | 'z' | 'radial'
+
+export interface ColorParameters {
+  // Coloring strategy
+  mode: ColorMode
+  // Single solid color (hex) used in 'single' mode
+  single: string
+  // Discrete palette (hex array) used in 'palette' mode — each dot gets one color
+  palette: string[]
+  // Gradient stops (hex array) used in 'gradient' mode — interpolated across an axis
+  gradient: string[]
+  // Axis along which the gradient is mapped
+  gradientAxis: GradientAxis
+  // Overall saturation/vividness multiplier (0-1.5)
+  saturation: number
+}
 
 // ═══════════════════════════════════════════════════════════════
 // LATTICE MODE — Polyhedra from Fibonacci Sphere

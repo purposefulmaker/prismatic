@@ -60,6 +60,7 @@ export function NothingburgerEngine({
     setPattern,
     setShapeText,
     setLatticeParam,
+    setColorParam,
   } = usePrismParameters(initialParams)
 
   const { canvasRef, stats, panelHidden, setPanelHidden } = useThreeEngine(params, {
@@ -96,6 +97,7 @@ export function NothingburgerEngine({
           onPresetApply={applyPreset}
           onShapeTextChange={setShapeText}
           onLatticeChange={setLatticeParam}
+          onColorChange={setColorParam}
           isOpen={panelOpen}
           onToggle={handlePanelToggle}
         />

@@ -5,10 +5,9 @@ import type { PrismNode, PrismParameters, EngineState, EngineStats, ThreeScene }
 import {
   createFibonacciSphere,
   rodriguesRotate,
-  nodeWavelength,
-  wavelengthToRGB,
   calculateBeamPattern,
   applyPovPersistence,
+  resolveNodeColor,
   DEFAULT_NODE_COUNT,
   createVolumetricShells,
   createThreeScene,
@@ -174,9 +173,8 @@ export function useThreeEngine(
         node.y = ry
         node.z = rz
 
-        // Calculate wavelength and color
-        const nm = nodeWavelength(node, P.refIdx, P.dispersion)
-        const [cr, cg, cb] = wavelengthToRGB(nm)
+        // Resolve color based on active color mode
+        const [cr, cg, cb] = resolveNodeColor(node, P.color, P.refIdx, P.dispersion)
 
         // Store base color
         node.r = cr
