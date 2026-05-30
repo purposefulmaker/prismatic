@@ -94,7 +94,9 @@ export function isNodeInPlanarShape(
   // the vertical rate to keep letters from stretching. We pick a base vertical
   // scale and derive the horizontal one as base/2 for aspect-correct text.
   const base = 0.85 * shapeScale
-  const u = 0.5 + node.ox * (base * 0.5)
+  // Subtract so +X (viewer's right when looking at the front face from +Z)
+  // maps to increasing texture U — text reads left-to-right, not mirrored.
+  const u = 0.5 - node.ox * (base * 0.5)
   const v = 0.5 - node.oy * base // flip Y (texture is top-down)
 
   if (u < 0 || u > 1 || v < 0 || v > 1) return false

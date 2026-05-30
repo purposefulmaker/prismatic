@@ -462,8 +462,8 @@ export function PrismControlPanel({
           'fixed z-[100] bg-black/94 border-white/8 overflow-y-auto',
           'scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent',
           'font-mono text-[#ddd] select-none transition-transform duration-300',
-          // Desktop: right sidebar
-          'md:right-0 md:top-0 md:w-[300px] md:h-screen md:border-l md:p-3.5',
+          // Desktop: right sidebar (clear the mobile left:0 from inset-x-0)
+          'md:left-auto md:right-0 md:top-0 md:w-[300px] md:h-screen md:border-l md:p-3.5',
           !isOpen && 'md:translate-x-full',
           // Mobile: bottom sheet (80% height)
           'inset-x-0 bottom-0 h-[80vh] md:h-screen rounded-t-2xl md:rounded-none border-t md:border-t-0 p-4 md:p-3.5',
