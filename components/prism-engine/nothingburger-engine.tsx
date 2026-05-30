@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useThreeEngine } from '@/hooks/use-three-engine'
 import { usePrismParameters } from '@/hooks/use-prism-parameters'
 import { PrismStats } from './prism-stats'
@@ -51,7 +51,13 @@ export function NothingburgerEngine({
   defaultPanelOpen = true,
   className,
 }: NothingburgerEngineProps) {
-  const [panelOpen, setPanelOpen] = useState(defaultPanelOpen)
+  // Start with panel closed on mobile
+  const [panelOpen, setPanelOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768 ? defaultPanelOpen : false
+    }
+    return defaultPanelOpen
+  })
 
   const {
     params,

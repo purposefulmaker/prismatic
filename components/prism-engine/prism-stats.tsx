@@ -15,7 +15,8 @@ export function PrismStats({ stats, className }: PrismStatsProps) {
   return (
     <div
       className={cn(
-        'fixed left-3.5 top-3.5 z-50 font-mono text-[9px] text-white/30 leading-[1.9]',
+        'fixed left-2 top-2 md:left-3.5 md:top-3.5 z-50',
+        'font-mono text-[8px] md:text-[9px] text-white/30 leading-[1.7] md:leading-[1.9]',
         className
       )}
     >
@@ -23,15 +24,15 @@ export function PrismStats({ stats, className }: PrismStatsProps) {
         NODES <span className="text-white/80 font-bold">{stats.nodeCount}</span>
       </div>
       <div>
-        ACTIVE BEAMS <span className="text-white/80 font-bold">{stats.activeBeams}</span>
+        BEAMS <span className="text-white/80 font-bold">{stats.activeBeams}</span>
       </div>
-      <div>
+      <div className="hidden md:block">
         RPM <span className="text-white/80 font-bold">{stats.rpm}</span>
       </div>
-      <div>
+      <div className="hidden md:block">
         λ RANGE <span className="text-white/80 font-bold">{stats.wavelengthRange}</span>
       </div>
-      <div>
+      <div className="hidden md:block">
         POV τ <span className="text-white/80 font-bold">{stats.povTau}</span>
       </div>
       <div>

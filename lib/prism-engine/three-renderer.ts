@@ -419,7 +419,10 @@ export function updateViewport(
   threeScene.renderer.setPixelRatio(dpr)
   threeScene.renderer.setSize(width, height)
 
-  const panelW = panelHidden ? 0 : 300
+  // On mobile (< 768px), panel is a bottom-sheet overlay so use full width.
+  // On desktop, reserve 300px for the side panel when open.
+  const isMobile = width < 768
+  const panelW = isMobile ? 0 : panelHidden ? 0 : 300
   threeScene.viewWidth = Math.max(60, width - panelW)
   threeScene.viewHeight = height
   threeScene.canvasWidth = width

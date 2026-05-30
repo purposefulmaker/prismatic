@@ -435,28 +435,39 @@ export function PrismControlPanel({
 
   return (
     <>
-      {/* Toggle Button */}
+      {/* Toggle Button - positioned differently on mobile */}
       <button
         onClick={onToggle}
         className={cn(
-          'fixed top-1/2 -translate-y-1/2 w-5 h-[50px] z-[101]',
-          'bg-white/5 border border-white/8 border-r-0 rounded-l-sm',
-          'cursor-pointer flex items-center justify-center text-[10px] text-white/60',
+          'fixed z-[101]',
+          'bg-white/5 border border-white/8 cursor-pointer',
+          'flex items-center justify-center text-white/60',
           'hover:bg-white/10 transition-all',
-          isOpen ? 'right-[300px]' : 'right-0'
+          // Desktop: right edge, vertical
+          'md:top-1/2 md:-translate-y-1/2 md:w-5 md:h-[50px] md:border-r-0 md:rounded-l-sm md:text-[10px]',
+          isOpen ? 'md:right-[300px]' : 'md:right-0',
+          // Mobile: bottom center, horizontal pill
+          'bottom-4 left-1/2 -translate-x-1/2 md:bottom-auto md:left-auto md:translate-x-0',
+          'w-16 h-10 rounded-full text-xs md:w-5 md:h-[50px] md:rounded-l-sm md:rounded-r-none',
+          'border-b md:border-b'
         )}
       >
-        {isOpen ? '▶' : '◀'}
+        <span className="md:hidden">{isOpen ? 'CLOSE' : 'CTRL'}</span>
+        <span className="hidden md:inline">{isOpen ? '▶' : '◀'}</span>
       </button>
 
-      {/* Panel */}
+      {/* Panel - full screen slide-up on mobile, right sidebar on desktop */}
       <div
         className={cn(
-          'fixed right-0 top-0 w-[300px] h-screen z-[100]',
-          'bg-black/94 border-l border-white/8 p-3.5 overflow-y-auto',
+          'fixed z-[100] bg-black/94 border-white/8 overflow-y-auto',
           'scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent',
           'font-mono text-[#ddd] select-none transition-transform duration-300',
-          !isOpen && 'translate-x-full',
+          // Desktop: right sidebar
+          'md:right-0 md:top-0 md:w-[300px] md:h-screen md:border-l md:p-3.5',
+          !isOpen && 'md:translate-x-full',
+          // Mobile: bottom sheet (80% height)
+          'inset-x-0 bottom-0 h-[80vh] md:h-screen rounded-t-2xl md:rounded-none border-t md:border-t-0 p-4 md:p-3.5',
+          !isOpen && 'translate-y-full md:translate-y-0',
           className
         )}
       >
