@@ -419,11 +419,13 @@ export function updateViewport(
   threeScene.renderer.setPixelRatio(dpr)
   threeScene.renderer.setSize(width, height)
 
-  // On mobile (< 768px), panel is a bottom-sheet overlay so use full width.
-  // On desktop, reserve 300px for the side panel when open.
-  const isMobile = width < 768
-  const panelW = isMobile ? 0 : panelHidden ? 0 : 300
-  threeScene.viewWidth = Math.max(60, width - panelW)
+  // Always render the scene across the FULL window and center the shape at the
+  // true window center. The control panel is an overlay (right sidebar on
+  // desktop, bottom sheet on mobile), so the shape stays dead-center in every
+  // layout regardless of whether the panel is open. (panelHidden no longer
+  // affects centering — kept for signature compatibility.)
+  void panelHidden
+  threeScene.viewWidth = width
   threeScene.viewHeight = height
   threeScene.canvasWidth = width
   threeScene.canvasHeight = height

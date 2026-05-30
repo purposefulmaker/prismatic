@@ -243,7 +243,7 @@ export const PRESETS: PrismPreset[] = [
         enabled: true,
         base: 'tri',
         shape: 'v0',
-        shells: 24,
+        shells: 32,
         edgeWidth: 2.0,
         edgeOpacity: 0.85,
         static: true,

@@ -201,12 +201,13 @@ export function useThreeEngine(
           // around the sphere surface via spherical UV mapping.
           if (shapeMaskRef.current && P.shapeTxt) {
             if (isStatic) {
-              // Static: only light text on the FRONT face (oz > 0) so the
-              // letters don't ghost through from the back of the prism.
-              const onFrontFace = node.oz > 0.05
+              // Static: light text on a front slab of the prism (~0.32 deep).
+              // Slab depth balances crispness (thin) vs. enough sample points
+              // (thicker) so the letters are legible against the dot lattice.
+              const onFrontFace = node.oz > 0.12
               const inText =
                 onFrontFace && isNodeInPlanarShape(node, shapeMaskRef.current, P.shapeScale)
-              node.intensity = inText ? 1.0 : 0.14
+              node.intensity = inText ? 1.0 : 0.1
             } else {
               const inText = isNodeInShape(node, shapeMaskRef.current, P.shapeScale)
               node.intensity = inText ? 0.95 : 0.16

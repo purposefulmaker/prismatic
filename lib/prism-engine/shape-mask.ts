@@ -93,11 +93,17 @@ export function isNodeInPlanarShape(
   // The texture is 256×128 (2:1), so the horizontal node→UV rate must be HALF
   // the vertical rate to keep letters from stretching. We pick a base vertical
   // scale and derive the horizontal one as base/2 for aspect-correct text.
-  const base = 0.85 * shapeScale
-  // Subtract so +X (viewer's right when looking at the front face from +Z)
-  // maps to increasing texture U — text reads left-to-right, not mirrored.
-  const u = 0.5 - node.ox * (base * 0.5)
-  const v = 0.5 - node.oy * base // flip Y (texture is top-down)
+  // The triangle apex is narrow at the top, so the text is shifted DOWN into
+  // the wide lower-center band where the lattice actually has nodes, and is
+  // scaled so a full rectangular glyph fits inside the triangular silhouette.
+  const yCenter = -0.18 // shift text down toward the wide base
+  const hScale = 1.0 * shapeScale // vertical text rate (smaller = bigger text)
+  const wScale = 0.55 * shapeScale // horizontal rate (texture is 2:1)
+
+  // Camera sits at +Z looking toward origin, so +X is the viewer's RIGHT.
+  // Map +X → larger U so characters run left-to-right (not mirrored).
+  const u = 0.5 + node.ox * wScale
+  const v = 0.5 - (node.oy - yCenter) * hScale // flip Y (texture is top-down)
 
   if (u < 0 || u > 1 || v < 0 || v > 1) return false
 
