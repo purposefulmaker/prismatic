@@ -419,13 +419,11 @@ export function updateViewport(
   threeScene.renderer.setPixelRatio(dpr)
   threeScene.renderer.setSize(width, height)
 
-  // Always render the scene across the FULL window and center the shape at the
-  // true window center. The control panel is an overlay (right sidebar on
-  // desktop, bottom sheet on mobile), so the shape stays dead-center in every
-  // layout regardless of whether the panel is open. (panelHidden no longer
-  // affects centering — kept for signature compatibility.)
-  void panelHidden
-  threeScene.viewWidth = width
+  // On mobile (< 768px), panel is a bottom-sheet overlay so use full width.
+  // On desktop, reserve 300px for the side panel when it's open.
+  const isMobile = width < 768
+  const panelW = isMobile ? 0 : panelHidden ? 0 : 300
+  threeScene.viewWidth = Math.max(60, width - panelW)
   threeScene.viewHeight = height
   threeScene.canvasWidth = width
   threeScene.canvasHeight = height
@@ -564,13 +562,14 @@ export function renderThreeFrame(
   renderer.clear()
   renderer.render(scene, camera)
 
-  // ── Pass 2: tone-map HDR buffer to the screen ──
+  // ── Pass 2: tone-map HDR buffer to the screen, CENTERED ──
   renderer.setRenderTarget(null)
-  // Clear the full canvas to black (keeps area behind the panel dark)
   renderer.setViewport(0, 0, canvasWidth, canvasHeight)
   renderer.clear()
-  // Draw tone-mapped result only into the visible view region
-  renderer.setViewport(0, 0, viewWidth, viewHeight)
+  // Center the rendered region in the canvas
+  const offsetX = Math.floor((canvasWidth - viewWidth) / 2)
+  const offsetY = Math.floor((canvasHeight - viewHeight) / 2)
+  renderer.setViewport(offsetX, offsetY, viewWidth, viewHeight)
   renderer.render(postScene, postCamera)
 
   return beamIndex
