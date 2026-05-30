@@ -419,7 +419,6 @@ export function PrismControlPanel({
 
   const latticeShapes: { name: LatticeShape; label: string }[] = [
     { name: 'sphere', label: 'SPHERE' },
-    { name: 'v0', label: 'v0' },
     { name: 'pyramid', label: 'PYRAMID' },
     { name: 'cube', label: 'CUBE' },
     { name: 'diamond', label: 'DIAMOND' },

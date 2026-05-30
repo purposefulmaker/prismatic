@@ -98,7 +98,7 @@ export interface ColorParameters {
 // ═══════════════════════════════════════════════════════════════
 
 export type LatticeBase = 'tri' | 'quad' | 'hex' | 'off'
-export type LatticeShape = 'sphere' | 'v0' | 'pyramid' | 'cube' | 'diamond' | 'star'
+export type LatticeShape = 'sphere' | 'pyramid' | 'cube' | 'diamond' | 'star'
 
 export interface LatticeEdge {
   // Indices of connected nodes
@@ -183,7 +183,6 @@ export const EQUATION_MAP: Record<BeamPattern, string> = {
 // Lattice shape display mapping
 export const LATTICE_SHAPE_MAP: Record<LatticeShape, string> = {
   sphere: 'SPHERE: Fibonacci uniform distribution',
-  v0: 'v0: Vercel triangle · AI emergence',
   pyramid: 'PYRAMID: Tetrahedron · Fire element',
   cube: 'CUBE: Hexahedron · Earth element',
   diamond: 'DIAMOND: Octahedron · Air element',

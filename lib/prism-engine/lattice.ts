@@ -12,44 +12,6 @@ import { GOLDEN_RATIO } from './constants'
 // Negative = inside, Positive = outside
 
 /**
- * 2D equilateral triangle SDF (Inigo Quilez), pointing UP.
- * r is the triangle "radius". Returns negative inside.
- */
-function sdEquilateralTriangle(x: number, y: number, r: number): number {
-  const k = Math.sqrt(3.0)
-  let px = Math.abs(x) - r
-  let py = y + r / k
-  // The fold step that makes this an actual triangle (was missing before)
-  if (px + k * py > 0.0) {
-    const nx = (px - k * py) / 2.0
-    const ny = (-k * px - py) / 2.0
-    px = nx
-    py = ny
-  }
-  px -= Math.clamp(px, -2.0 * r, 0.0)
-  return -Math.sqrt(px * px + py * py) * Math.sign(py)
-}
-
-/**
- * v0 Triangle Prism SDF
- * Correct extruded equilateral triangle (the Vercel mark), pointing up.
- */
-function sdfV0Prism(x: number, y: number, z: number): number {
-  const depth = 0.32 // half-thickness of the prism along Z
-  const r = 0.82 // triangle radius
-
-  // Triangle lives in the XY plane. Negate Y so the apex points UP (the
-  // Vercel mark ▲); small +Y shift keeps it vertically centered in view.
-  const d2d = sdEquilateralTriangle(x, -y + 0.08, r)
-
-  // Extrude along Z
-  const dz = Math.abs(z) - depth
-
-  // CSG intersection of the 2D triangle and the slab
-  return Math.max(d2d, dz)
-}
-
-/**
  * Pyramid (Tetrahedron) SDF
  */
 function sdfPyramid(x: number, y: number, z: number): number {
@@ -122,8 +84,6 @@ export function evaluateShapeSDF(
   switch (shape) {
     case 'sphere':
       return Math.sqrt(x * x + y * y + z * z) - 1.0
-    case 'v0':
-      return sdfV0Prism(x, y, z)
     case 'pyramid':
       return sdfPyramid(x, y, z)
     case 'cube':
