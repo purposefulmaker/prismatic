@@ -65,6 +65,9 @@ export interface PrismParameters {
   // Spotlight mode: freeze rotation and project shapeTxt planar onto the
   // camera-facing hemisphere (hologram lock — text always faces the viewer)
   spotlight: boolean
+  // REALITY BENDER: full GPU tier — 30k nodes, all per-node math (warp,
+  // rotation, color, interference) in the vertex shader, zero CPU node loop
+  gpuMode: boolean
   // Lattice mode parameters
   lattice: LatticeParameters
   // Color mode parameters

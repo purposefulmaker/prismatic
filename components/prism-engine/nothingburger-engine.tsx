@@ -92,6 +92,7 @@ export function NothingburgerEngine({
   }
 
   const inSpotlight = !!params.spotlight
+  const inBender = !!params.gpuMode
 
   return (
     <div className={className}>
@@ -113,7 +114,7 @@ export function NothingburgerEngine({
             <p className="font-mono text-[9px] md:text-[10px] tracking-[0.3em] text-white/35 text-balance">
               FIBONACCI LATTICE · GOLDEN ANGLE · POV PERSISTENCE
             </p>
-            <div className="pointer-events-auto mt-1 flex gap-2">
+            <div className="pointer-events-auto mt-1 flex flex-wrap justify-center gap-2">
               <button
                 onClick={() => applyPreset('v0-spotlight')}
                 className={
@@ -129,14 +130,30 @@ export function NothingburgerEngine({
                 onClick={() => applyPreset('genesis')}
                 className={
                   'font-mono text-[10px] tracking-[0.2em] px-4 py-1.5 rounded-full border transition-colors ' +
-                  (!inSpotlight
+                  (!inSpotlight && !inBender
                     ? 'border-white/80 bg-white text-black'
                     : 'border-white/20 bg-transparent text-white/60 hover:border-white/50 hover:text-white')
                 }
               >
                 DISCO
               </button>
+              <button
+                onClick={() => applyPreset('reality-bender')}
+                className={
+                  'font-mono text-[10px] tracking-[0.2em] px-4 py-1.5 rounded-full border transition-colors ' +
+                  (inBender
+                    ? 'border-white/80 bg-white text-black'
+                    : 'border-white/20 bg-transparent text-white/60 hover:border-white/50 hover:text-white')
+                }
+              >
+                REALITY BENDER
+              </button>
             </div>
+            {inBender && (
+              <p className="font-mono text-[8px] tracking-[0.25em] text-white/30">
+                GPU TIER · 30,000 NODES · ZERO CPU LOOP
+              </p>
+            )}
           </div>
 
           {/* Bottom-left: sponsored by Vercel */}

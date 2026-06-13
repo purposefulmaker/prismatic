@@ -157,6 +157,24 @@ export function useThreeEngine(
 
       state.t += dt
 
+      // REALITY BENDER: 30k nodes, all math on the GPU — zero CPU node loop.
+      if (P.gpuMode) {
+        renderThreeFrame(threeScene, [], P, state.t, dt, 1)
+        fpsCounterRef.current.count++
+        if (timestamp - fpsCounterRef.current.lastTime >= 1000) {
+          setStats({
+            nodeCount: 30000,
+            activeBeams: 30000,
+            rpm: Math.abs((0.22 / (Math.PI * 2)) * 60),
+            fps: fpsCounterRef.current.count,
+          })
+          fpsCounterRef.current.count = 0
+          fpsCounterRef.current.lastTime = timestamp
+        }
+        animationRef.current = requestAnimationFrame(animate)
+        return
+      }
+
       // Spotlight mode: full Fibonacci sphere, frozen rotation, text projected
       // planar onto the camera-facing hemisphere (always faces the viewer).
       const isSpotlight = !!(P.spotlight && P.shapeTxt && shapeMaskRef.current)

@@ -126,6 +126,76 @@ void main() {
 }
 `
 
+// ─── REALITY BENDER: full GPU tier ───
+// All per-node math (warp, rotation, spectral color, interference waves)
+// runs in the vertex shader. Positions upload ONCE; per frame the CPU only
+// updates a handful of uniforms. This is what lets node counts hit 30k+.
+const GPU_VERTEX = `
+attribute float aSeed;
+uniform float uTime, uPR, uSize, uHarmK, uPhaseV, uWarp, uHueShift;
+varying vec3 vCol;
+varying float vInt;
+varying float vDepth;
+
+// IQ cosine palette — full spectral sweep
+vec3 spectral(float t) {
+  return 0.5 + 0.5 * cos(6.28318 * (t + vec3(0.0, 0.33, 0.67)));
+}
+
+void main() {
+  vec3 p = position;
+  float theta = acos(clamp(p.z, -1.0, 1.0));
+  float phi = atan(p.y, p.x);
+
+  // Reality warp: the sphere surface undulates along its own normal
+  float warp = 1.0 + uWarp * sin(phi * 3.0 + uTime * 1.2) * sin(theta * 4.0 - uTime * 0.9);
+  p *= warp;
+
+  // GPU rotation (Y then X axis)
+  float ay = uTime * 0.22;
+  float ax = uTime * 0.09;
+  float cy = cos(ay), sy = sin(ay);
+  p = vec3(p.x * cy + p.z * sy, p.y, -p.x * sy + p.z * cy);
+  float cx = cos(ax), sx = sin(ax);
+  p = vec3(p.x, p.y * cx - p.z * sx, p.y * sx + p.z * cx);
+
+  // GPU interference field — two traveling harmonic waves + product term
+  float w1 = 0.5 + 0.5 * cos(uHarmK * phi - uTime * uPhaseV * 3.0 + theta * 2.0);
+  float w2 = 0.5 + 0.5 * cos((uHarmK + 2.0) * theta + uTime * uPhaseV * 2.0 + aSeed * 6.28318);
+  float inten = pow(w1, 5.0) * 0.9 + pow(w2, 7.0) * 0.55 + pow(w1 * w2, 3.0) * 0.5;
+  vInt = clamp(inten, 0.0, 1.5);
+
+  // Spectral color by latitude, hue drifting through time
+  vCol = spectral(theta / 3.14159 + uHueShift * uTime);
+  vDepth = (p.z + 1.0) * 0.5;
+
+  vec4 mv = modelViewMatrix * vec4(p, 1.0);
+  float depthF = 0.5 + vDepth * 0.6;
+  float intF = 0.45 + vInt * 1.5;
+  float sz = uSize * depthF * intF;
+  gl_PointSize = clamp(sz * uPR * 22.0 / (-mv.z), 1.0, 60.0);
+  gl_Position = projectionMatrix * mv;
+}
+`
+
+const GPU_FRAGMENT = `
+precision highp float;
+varying vec3 vCol;
+varying float vInt;
+varying float vDepth;
+
+void main() {
+  float d = length(gl_PointCoord - 0.5) * 2.0;
+  if (d > 1.0) discard;
+  float core = exp(-d * d * 7.0);
+  float mid = exp(-d * d * 2.0) * 0.4;
+  float shape = core + mid;
+  float baseB = 0.05 + vDepth * 0.07;
+  vec3 col = vCol * (mid * (0.7 + vInt * 1.6) + core * (0.3 + vInt * 0.6)) + vec3(1.0, 0.97, 0.92) * core * vInt * 0.9;
+  gl_FragColor = vec4(col, shape * (baseB + vInt * 0.85));
+}
+`
+
 // Fullscreen tone-mapping pass — compresses HDR highlights (ACES filmic)
 // so dense additive regions keep their color/pattern instead of clipping to white.
 const TONE_VERTEX = `
@@ -170,6 +240,10 @@ export interface ThreeScene {
   prismMesh: THREE.Points
   prismMaterial: THREE.ShaderMaterial
   starMaterial: THREE.ShaderMaterial
+  dotPoints: THREE.Points
+  beamLines: THREE.LineSegments
+  gpuPoints: THREE.Points
+  gpuMaterial: THREE.ShaderMaterial
   dotPositions: Float32Array
   dotColors: Float32Array
   dotIntensities: Float32Array
@@ -193,6 +267,7 @@ export interface ThreeScene {
 const FOV = 50
 const PRISM_RING_COUNT = 64
 const STAR_COUNT = 1100
+export const GPU_NODE_COUNT = 30000
 
 export function createThreeScene(canvas: HTMLCanvasElement, nodeCount: number): ThreeScene {
   // Renderer
@@ -233,7 +308,8 @@ export function createThreeScene(canvas: HTMLCanvasElement, nodeCount: number): 
     vertexColors: true,
   })
 
-  scene.add(new THREE.Points(dotGeometry, dotMaterial))
+  const dotPoints = new THREE.Points(dotGeometry, dotMaterial)
+  scene.add(dotPoints)
 
   // ─── Beam threads ───
   const beamPositions = new Float32Array(nodeCount * 2 * 3)
@@ -256,7 +332,48 @@ export function createThreeScene(canvas: HTMLCanvasElement, nodeCount: number): 
     vertexColors: true,
   })
 
-  scene.add(new THREE.LineSegments(beamGeometry, beamMaterial))
+  const beamLines = new THREE.LineSegments(beamGeometry, beamMaterial)
+  scene.add(beamLines)
+
+  // ─── REALITY BENDER GPU layer: 30k Fibonacci nodes, math lives on GPU ───
+  const gpuPositions = new Float32Array(GPU_NODE_COUNT * 3)
+  const gpuSeeds = new Float32Array(GPU_NODE_COUNT)
+  const GA = Math.PI * (3 - Math.sqrt(5)) // golden angle
+  for (let i = 0; i < GPU_NODE_COUNT; i++) {
+    const z = 1 - (2 * (i + 0.5)) / GPU_NODE_COUNT
+    const r = Math.sqrt(Math.max(0, 1 - z * z))
+    const phi = i * GA
+    gpuPositions[i * 3] = Math.cos(phi) * r
+    gpuPositions[i * 3 + 1] = Math.sin(phi) * r
+    gpuPositions[i * 3 + 2] = z
+    gpuSeeds[i] = i / GPU_NODE_COUNT
+  }
+
+  const gpuGeometry = new THREE.BufferGeometry()
+  gpuGeometry.setAttribute('position', new THREE.BufferAttribute(gpuPositions, 3))
+  gpuGeometry.setAttribute('aSeed', new THREE.BufferAttribute(gpuSeeds, 1))
+
+  const gpuMaterial = new THREE.ShaderMaterial({
+    vertexShader: GPU_VERTEX,
+    fragmentShader: GPU_FRAGMENT,
+    uniforms: {
+      uTime: { value: 0 },
+      uPR: { value: 2 },
+      uSize: { value: 2.0 },
+      uHarmK: { value: 3 },
+      uPhaseV: { value: 1.0 },
+      uWarp: { value: 0.16 },
+      uHueShift: { value: 0.02 },
+    },
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthTest: false,
+    depthWrite: false,
+  })
+
+  const gpuPoints = new THREE.Points(gpuGeometry, gpuMaterial)
+  gpuPoints.visible = false
+  scene.add(gpuPoints)
 
   // ─── Prism core (white-blue glow + rotating rainbow ring) ───
   const prismPositions = new Float32Array((PRISM_RING_COUNT + 1) * 3)
@@ -389,6 +506,10 @@ export function createThreeScene(canvas: HTMLCanvasElement, nodeCount: number): 
     prismMesh,
     prismMaterial,
     starMaterial,
+    dotPoints,
+    beamLines,
+    gpuPoints,
+    gpuMaterial,
     dotPositions,
     dotColors,
     dotIntensities,
@@ -478,6 +599,43 @@ export function renderThreeFrame(
     scene,
     camera,
   } = threeScene
+
+  // ── REALITY BENDER fast path: GPU does everything per-node ──
+  if (params.gpuMode) {
+    const { gpuPoints, gpuMaterial, dotPoints, beamLines } = threeScene
+    gpuPoints.visible = true
+    dotPoints.visible = false
+    beamLines.visible = false
+
+    gpuMaterial.uniforms.uTime.value = time
+    gpuMaterial.uniforms.uPR.value = renderer.getPixelRatio()
+    gpuMaterial.uniforms.uSize.value = params.dr * 0.7
+    gpuMaterial.uniforms.uHarmK.value = Math.max(1, params.harmK)
+    gpuMaterial.uniforms.uPhaseV.value = params.phaseV
+
+    prismMaterial.uniforms.uPrism.value = params.prismInt
+    prismMesh.rotation.z += dt * 0.3
+    starMaterial.uniforms.t.value = time
+
+    const { rt: grt, postScene: gps, postCamera: gpc, viewWidth: gvw, viewHeight: gvh, canvasWidth: gcw, canvasHeight: gch } = threeScene
+    const gdpr = renderer.getPixelRatio()
+    renderer.setRenderTarget(grt)
+    renderer.setViewport(0, 0, gvw * gdpr, gvh * gdpr)
+    renderer.setClearColor(0x000000, 1)
+    renderer.clear()
+    renderer.render(scene, camera)
+    renderer.setRenderTarget(null)
+    renderer.setViewport(0, 0, gcw, gch)
+    renderer.clear()
+    renderer.setViewport(Math.floor((gcw - gvw) / 2), Math.floor((gch - gvh) / 2), gvw, gvh)
+    renderer.render(gps, gpc)
+    return GPU_NODE_COUNT
+  }
+
+  // CPU path: hide the GPU layer, show dots/beams
+  threeScene.gpuPoints.visible = false
+  threeScene.dotPoints.visible = true
+  threeScene.beamLines.visible = true
 
   let beamIndex = 0
 
@@ -585,4 +743,6 @@ export function disposeThreeScene(threeScene: ThreeScene): void {
   threeScene.starMaterial.dispose()
   threeScene.toneMaterial.dispose()
   threeScene.rt.dispose()
+  threeScene.gpuPoints.geometry.dispose()
+  threeScene.gpuMaterial.dispose()
 }

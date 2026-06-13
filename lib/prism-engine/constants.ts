@@ -74,6 +74,7 @@ export const DEFAULT_PARAMETERS: PrismParameters = {
   ba: 0.04,
   shapeTxt: '',
   spotlight: false,
+  gpuMode: false,
   lattice: DEFAULT_LATTICE,
   color: DEFAULT_COLOR,
 }
@@ -103,7 +104,22 @@ export const PRESETS: PrismPreset[] = [
       ba: 0,
       shapeTxt: 'v0',
       spotlight: true,
+      gpuMode: false,
       color: { ...DEFAULT_COLOR, mode: 'single', single: '#ffffff' },
+    },
+  },
+  {
+    name: 'reality-bender',
+    label: 'REALITY BENDER',
+    params: {
+      spotlight: false,
+      gpuMode: true,
+      shapeTxt: '',
+      prismInt: 0.8,
+      harmK: 3,
+      phaseV: 1.1,
+      dr: 3.0,
+      color: { ...DEFAULT_COLOR },
     },
   },
   {
@@ -111,6 +127,7 @@ export const PRESETS: PrismPreset[] = [
     label: 'GENESIS',
     params: {
       spotlight: false,
+      gpuMode: false,
       shapeTxt: '',
       color: { ...DEFAULT_COLOR },
       tau: 0.15,
@@ -137,6 +154,7 @@ export const PRESETS: PrismPreset[] = [
     label: 'STORM',
     params: {
       spotlight: false,
+      gpuMode: false,
       color: { ...DEFAULT_COLOR },
       tau: 0.04,
       shapeScale: 1,
@@ -162,6 +180,7 @@ export const PRESETS: PrismPreset[] = [
     label: 'PRAYER',
     params: {
       spotlight: false,
+      gpuMode: false,
       color: { ...DEFAULT_COLOR },
       tau: 0.25,
       shapeScale: 1,
@@ -187,6 +206,7 @@ export const PRESETS: PrismPreset[] = [
     label: 'NOVA',
     params: {
       spotlight: false,
+      gpuMode: false,
       color: { ...DEFAULT_COLOR },
       tau: 0.08,
       shapeScale: 1,
@@ -212,6 +232,7 @@ export const PRESETS: PrismPreset[] = [
     label: 'DNA',
     params: {
       spotlight: false,
+      gpuMode: false,
       color: { ...DEFAULT_COLOR },
       tau: 0.1,
       shapeScale: 1,
@@ -237,6 +258,7 @@ export const PRESETS: PrismPreset[] = [
     label: 'VOID',
     params: {
       spotlight: false,
+      gpuMode: false,
       color: { ...DEFAULT_COLOR },
       tau: 0.3,
       shapeScale: 1,
