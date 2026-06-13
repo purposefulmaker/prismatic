@@ -97,9 +97,11 @@ export function isNodeInSpotlightShape(
   const vRate = 0.72 * shapeScale
   const uRate = vRate * 0.5
 
-  // Camera sits at +Z looking at origin: +X is viewer's right, +Y is up.
+  // Empirically verified against the render: node +X maps to texture-right
+  // (left-to-right reading order) and node +Y maps to texture-DOWN (this
+  // engine's screen-space Y is inverted vs. the naive +Z-camera assumption).
   const u = 0.5 + x * uRate
-  const v = 0.5 - y * vRate
+  const v = 0.5 + y * vRate
 
   if (u < 0 || u > 1 || v < 0 || v > 1) return false
 
