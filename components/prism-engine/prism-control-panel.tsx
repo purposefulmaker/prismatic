@@ -517,6 +517,67 @@ export function PrismControlPanel({
           </ControlRow>
         </Section>
 
+        {/* REALITY BENDER — GPU tier */}
+        <Section title="⌁ REALITY BENDER · GPU">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-[9px] text-white/50">GPU Mode (30k nodes)</label>
+            <button
+              onClick={() => onParamChange('gpuMode', !params.gpuMode)}
+              className={cn(
+                'px-3 py-1 text-[8px] tracking-[1px] rounded-sm border transition-all',
+                params.gpuMode
+                  ? 'bg-white/20 border-white/40 text-white'
+                  : 'bg-white/4 border-white/10 text-white/40'
+              )}
+            >
+              {params.gpuMode ? 'ON' : 'OFF'}
+            </button>
+          </div>
+
+          {params.gpuMode && (
+            <>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-[9px] text-white/50">V0 Prism (Floyd)</label>
+                <button
+                  onClick={() => onParamChange('gpuV0', !params.gpuV0)}
+                  className={cn(
+                    'px-3 py-1 text-[8px] tracking-[1px] rounded-sm border transition-all',
+                    params.gpuV0
+                      ? 'bg-white/20 border-white/40 text-white'
+                      : 'bg-white/4 border-white/10 text-white/40'
+                  )}
+                >
+                  {params.gpuV0 ? 'ON' : 'OFF'}
+                </button>
+              </div>
+              <ControlRow label="Reality Warp" value={params.gpuWarp.toFixed(2)}>
+                <PrismSlider
+                  value={params.gpuWarp * 100}
+                  min={0}
+                  max={60}
+                  onChange={v => onParamChange('gpuWarp', v / 100)}
+                />
+              </ControlRow>
+              <ControlRow label="Hue Drift" value={params.gpuHue.toFixed(3)}>
+                <PrismSlider
+                  value={params.gpuHue * 1000}
+                  min={0}
+                  max={200}
+                  onChange={v => onParamChange('gpuHue', v / 1000)}
+                />
+              </ControlRow>
+              <ControlRow label="Spin" value={params.gpuSpin.toFixed(1)}>
+                <PrismSlider
+                  value={params.gpuSpin * 10}
+                  min={0}
+                  max={30}
+                  onChange={v => onParamChange('gpuSpin', v / 10)}
+                />
+              </ControlRow>
+            </>
+          )}
+        </Section>
+
         {/* Color Mode */}
         <ColorSection color={params.color} onColorChange={onColorChange} />
 

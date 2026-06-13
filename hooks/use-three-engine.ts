@@ -14,6 +14,7 @@ import {
   updateViewport,
   renderThreeFrame,
   disposeThreeScene,
+  updateGpuMask,
 } from '@/lib/prism-engine'
 import {
   createShapeMask,
@@ -54,6 +55,7 @@ export function useThreeEngine(
   })
   const paramsRef = useRef<PrismParameters>(params)
   const shapeMaskRef = useRef<Uint8ClampedArray | null>(null)
+  const gpuMaskUploadedRef = useRef<Uint8ClampedArray | null>(null)
   const fpsCounterRef = useRef({ count: 0, lastTime: 0 })
   const animationRef = useRef<number>(0)
   const lastTimeRef = useRef<number>(0)
@@ -159,6 +161,11 @@ export function useThreeEngine(
 
       // REALITY BENDER: 30k nodes, all math on the GPU — zero CPU node loop.
       if (P.gpuMode) {
+        // Upload the text mask to the GPU only when it actually changes
+        if (gpuMaskUploadedRef.current !== shapeMaskRef.current) {
+          updateGpuMask(threeScene, shapeMaskRef.current)
+          gpuMaskUploadedRef.current = shapeMaskRef.current
+        }
         renderThreeFrame(threeScene, [], P, state.t, dt, 1)
         fpsCounterRef.current.count++
         if (timestamp - fpsCounterRef.current.lastTime >= 1000) {

@@ -68,6 +68,13 @@ export interface PrismParameters {
   // REALITY BENDER: full GPU tier — 30k nodes, all per-node math (warp,
   // rotation, color, interference) in the vertex shader, zero CPU node loop
   gpuMode: boolean
+  // REALITY BENDER controls
+  gpuWarp: number // surface warp amplitude (0-0.6)
+  gpuHue: number // hue drift rate through time (0-0.2)
+  gpuSpin: number // rotation speed multiplier (0-3)
+  // V0 PRISM: Pink Floyd mode — frozen mesh, white beam into the prism,
+  // spectral fan out, "v0" projected in rainbow across the front hemisphere
+  gpuV0: boolean
   // Lattice mode parameters
   lattice: LatticeParameters
   // Color mode parameters

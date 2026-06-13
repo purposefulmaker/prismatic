@@ -47,5 +47,6 @@ export {
   updateViewport,
   renderThreeFrame,
   disposeThreeScene,
+  updateGpuMask,
   type ThreeScene,
 } from './three-renderer'

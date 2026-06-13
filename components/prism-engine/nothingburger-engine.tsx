@@ -92,7 +92,8 @@ export function NothingburgerEngine({
   }
 
   const inSpotlight = !!params.spotlight
-  const inBender = !!params.gpuMode
+  const inBenderV0 = !!params.gpuMode && !!params.gpuV0
+  const inBender = !!params.gpuMode && !params.gpuV0
 
   return (
     <div className={className}>
@@ -130,7 +131,7 @@ export function NothingburgerEngine({
                 onClick={() => applyPreset('genesis')}
                 className={
                   'font-mono text-[10px] tracking-[0.2em] px-4 py-1.5 rounded-full border transition-colors ' +
-                  (!inSpotlight && !inBender
+                  (!inSpotlight && !params.gpuMode
                     ? 'border-white/80 bg-white text-black'
                     : 'border-white/20 bg-transparent text-white/60 hover:border-white/50 hover:text-white')
                 }
@@ -148,10 +149,26 @@ export function NothingburgerEngine({
               >
                 REALITY BENDER
               </button>
+              <button
+                onClick={() => applyPreset('v0-prism')}
+                className={
+                  'font-mono text-[10px] tracking-[0.2em] px-4 py-1.5 rounded-full border transition-colors ' +
+                  (inBenderV0
+                    ? 'border-white/80 bg-white text-black'
+                    : 'border-white/20 bg-transparent text-white/60 hover:border-white/50 hover:text-white')
+                }
+              >
+                V0 PRISM
+              </button>
             </div>
             {inBender && (
               <p className="font-mono text-[8px] tracking-[0.25em] text-white/30">
                 GPU TIER · 30,000 NODES · ZERO CPU LOOP
+              </p>
+            )}
+            {inBenderV0 && (
+              <p className="font-mono text-[8px] tracking-[0.25em] text-white/30">
+                ONE WHITE LIGHT · NTH SPECTRUM · 30,000 NODES
               </p>
             )}
           </div>

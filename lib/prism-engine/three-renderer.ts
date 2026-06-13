@@ -132,7 +132,8 @@ void main() {
 // updates a handful of uniforms. This is what lets node counts hit 30k+.
 const GPU_VERTEX = `
 attribute float aSeed;
-uniform float uTime, uPR, uSize, uHarmK, uPhaseV, uWarp, uHueShift;
+uniform float uTime, uPR, uSize, uHarmK, uPhaseV, uWarp, uHueShift, uSpin, uV0;
+uniform sampler2D uMask;
 varying vec3 vCol;
 varying float vInt;
 varying float vDepth;
@@ -147,13 +148,16 @@ void main() {
   float theta = acos(clamp(p.z, -1.0, 1.0));
   float phi = atan(p.y, p.x);
 
+  // V0 PRISM mode freezes warp and spin so the glyph holds still
+  float live = 1.0 - uV0;
+
   // Reality warp: the sphere surface undulates along its own normal
-  float warp = 1.0 + uWarp * sin(phi * 3.0 + uTime * 1.2) * sin(theta * 4.0 - uTime * 0.9);
+  float warp = 1.0 + uWarp * live * sin(phi * 3.0 + uTime * 1.2) * sin(theta * 4.0 - uTime * 0.9);
   p *= warp;
 
-  // GPU rotation (Y then X axis)
-  float ay = uTime * 0.22;
-  float ax = uTime * 0.09;
+  // GPU rotation (Y then X axis), scaled by spin control
+  float ay = uTime * 0.22 * uSpin * live;
+  float ax = uTime * 0.09 * uSpin * live;
   float cy = cos(ay), sy = sin(ay);
   p = vec3(p.x * cy + p.z * sy, p.y, -p.x * sy + p.z * cy);
   float cx = cos(ax), sx = sin(ax);
@@ -163,10 +167,27 @@ void main() {
   float w1 = 0.5 + 0.5 * cos(uHarmK * phi - uTime * uPhaseV * 3.0 + theta * 2.0);
   float w2 = 0.5 + 0.5 * cos((uHarmK + 2.0) * theta + uTime * uPhaseV * 2.0 + aSeed * 6.28318);
   float inten = pow(w1, 5.0) * 0.9 + pow(w2, 7.0) * 0.55 + pow(w1 * w2, 3.0) * 0.5;
-  vInt = clamp(inten, 0.0, 1.5);
 
   // Spectral color by latitude, hue drifting through time
-  vCol = spectral(theta / 3.14159 + uHueShift * uTime);
+  vec3 col = spectral(theta / 3.14159 + uHueShift * uTime);
+
+  // ── V0 PRISM: sample the text mask on the front hemisphere ──
+  // The white beam hits the central prism; the spectrum fans out and paints
+  // the glyph in rainbow across the mesh. Hue runs left-to-right like the
+  // Dark Side of the Moon dispersion fan.
+  if (uV0 > 0.5) {
+    float m = 0.0;
+    vec2 uvm = vec2(0.5 + p.x * 0.36, 0.5 - p.y * 0.72);
+    if (p.z > 0.15 && uvm.x > 0.0 && uvm.x < 1.0 && uvm.y > 0.0 && uvm.y < 1.0) {
+      m = step(0.5, texture2D(uMask, uvm).r);
+    }
+    // Glyph nodes blaze in spectral rainbow; background holds a dim shell
+    inten = m * (1.1 + 0.15 * sin(uTime * 2.0 + p.x * 4.0)) + 0.045;
+    col = mix(vec3(0.42, 0.45, 0.5), spectral(uvm.x * 0.75 + 0.02), m);
+  }
+
+  vInt = clamp(inten, 0.0, 1.5);
+  vCol = col;
   vDepth = (p.z + 1.0) * 0.5;
 
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
@@ -244,6 +265,8 @@ export interface ThreeScene {
   beamLines: THREE.LineSegments
   gpuPoints: THREE.Points
   gpuMaterial: THREE.ShaderMaterial
+  gpuMaskTexture: THREE.DataTexture
+  floydBeams: THREE.LineSegments
   dotPositions: Float32Array
   dotColors: Float32Array
   dotIntensities: Float32Array
@@ -353,6 +376,17 @@ export function createThreeScene(canvas: HTMLCanvasElement, nodeCount: number): 
   gpuGeometry.setAttribute('position', new THREE.BufferAttribute(gpuPositions, 3))
   gpuGeometry.setAttribute('aSeed', new THREE.BufferAttribute(gpuSeeds, 1))
 
+  // Text mask texture for V0 PRISM mode (256×128, RGBA — uploaded on demand)
+  const gpuMaskTexture = new THREE.DataTexture(
+    new Uint8Array(256 * 128 * 4),
+    256,
+    128,
+    THREE.RGBAFormat
+  )
+  gpuMaskTexture.minFilter = THREE.LinearFilter
+  gpuMaskTexture.magFilter = THREE.LinearFilter
+  gpuMaskTexture.needsUpdate = true
+
   const gpuMaterial = new THREE.ShaderMaterial({
     vertexShader: GPU_VERTEX,
     fragmentShader: GPU_FRAGMENT,
@@ -364,6 +398,9 @@ export function createThreeScene(canvas: HTMLCanvasElement, nodeCount: number): 
       uPhaseV: { value: 1.0 },
       uWarp: { value: 0.16 },
       uHueShift: { value: 0.02 },
+      uSpin: { value: 1.0 },
+      uV0: { value: 0 },
+      uMask: { value: gpuMaskTexture },
     },
     transparent: true,
     blending: THREE.AdditiveBlending,
@@ -374,6 +411,54 @@ export function createThreeScene(canvas: HTMLCanvasElement, nodeCount: number): 
   const gpuPoints = new THREE.Points(gpuGeometry, gpuMaterial)
   gpuPoints.visible = false
   scene.add(gpuPoints)
+
+  // ─── Pink Floyd beams: single white light in, spectrum fan out ───
+  const FAN_RAYS = 14
+  const floydVerts = (1 + FAN_RAYS) * 2
+  const floydPositions = new Float32Array(floydVerts * 3)
+  const floydColors = new Float32Array(floydVerts * 3)
+  const floydAlphas = new Float32Array(floydVerts)
+
+  // White beam: enters from lower-left, terminates at the prism core
+  floydPositions.set([-3.4, -1.25, 0.25, 0, 0, 0.25], 0)
+  floydColors.set([1, 1, 1, 1, 1, 1], 0)
+  floydAlphas[0] = 0.06
+  floydAlphas[1] = 0.95
+
+  // Spectral fan: from the prism out to the front face of the mesh, hues
+  // matching the glyph rainbow left (red) to right (violet)
+  for (let i = 0; i < FAN_RAYS; i++) {
+    const t = i / (FAN_RAYS - 1)
+    const ex = -1.0 + t * 2.0
+    const ey = 0.12 - Math.abs(ex) * 0.18
+    const ez = Math.sqrt(Math.max(0.05, 1 - ex * ex - ey * ey))
+    const [r, g, b] = wavelengthToRGB(700 - t * 320)
+    const base = (1 + i) * 2
+    floydPositions.set([0, 0, 0.05, ex * 0.97, ey, ez], base * 3)
+    floydColors.set([r, g, b, r, g, b], base * 3)
+    floydAlphas[base] = 0.85
+    floydAlphas[base + 1] = 0.18
+  }
+
+  const floydGeometry = new THREE.BufferGeometry()
+  floydGeometry.setAttribute('position', new THREE.BufferAttribute(floydPositions, 3))
+  floydGeometry.setAttribute('color', new THREE.BufferAttribute(floydColors, 3))
+  floydGeometry.setAttribute('aAlpha', new THREE.BufferAttribute(floydAlphas, 1))
+
+  const floydBeams = new THREE.LineSegments(
+    floydGeometry,
+    new THREE.ShaderMaterial({
+      vertexShader: BEAM_VERTEX,
+      fragmentShader: BEAM_FRAGMENT,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthTest: false,
+      depthWrite: false,
+      vertexColors: true,
+    })
+  )
+  floydBeams.visible = false
+  scene.add(floydBeams)
 
   // ─── Prism core (white-blue glow + rotating rainbow ring) ───
   const prismPositions = new Float32Array((PRISM_RING_COUNT + 1) * 3)
@@ -510,6 +595,8 @@ export function createThreeScene(canvas: HTMLCanvasElement, nodeCount: number): 
     beamLines,
     gpuPoints,
     gpuMaterial,
+    gpuMaskTexture,
+    floydBeams,
     dotPositions,
     dotColors,
     dotIntensities,
@@ -573,6 +660,23 @@ export function updateViewport(
   threeScene.starMaterial.uniforms.uPR.value = dpr
 }
 
+/**
+ * Upload the 256×128 text shape mask into the GPU mask texture used by
+ * V0 PRISM mode. Pass null to clear (glyph disappears).
+ */
+export function updateGpuMask(
+  threeScene: ThreeScene,
+  mask: Uint8ClampedArray | null
+): void {
+  const data = threeScene.gpuMaskTexture.image.data as Uint8Array
+  if (mask && mask.length === data.length) {
+    data.set(mask)
+  } else {
+    data.fill(0)
+  }
+  threeScene.gpuMaskTexture.needsUpdate = true
+}
+
 export function renderThreeFrame(
   threeScene: ThreeScene,
   nodes: PrismNode[],
@@ -602,19 +706,24 @@ export function renderThreeFrame(
 
   // ── REALITY BENDER fast path: GPU does everything per-node ──
   if (params.gpuMode) {
-    const { gpuPoints, gpuMaterial, dotPoints, beamLines } = threeScene
+    const { gpuPoints, gpuMaterial, dotPoints, beamLines, floydBeams } = threeScene
     gpuPoints.visible = true
     dotPoints.visible = false
     beamLines.visible = false
+    floydBeams.visible = !!params.gpuV0
 
     gpuMaterial.uniforms.uTime.value = time
     gpuMaterial.uniforms.uPR.value = renderer.getPixelRatio()
     gpuMaterial.uniforms.uSize.value = params.dr * 0.7
     gpuMaterial.uniforms.uHarmK.value = Math.max(1, params.harmK)
     gpuMaterial.uniforms.uPhaseV.value = params.phaseV
+    gpuMaterial.uniforms.uWarp.value = params.gpuWarp
+    gpuMaterial.uniforms.uHueShift.value = params.gpuHue
+    gpuMaterial.uniforms.uSpin.value = params.gpuSpin
+    gpuMaterial.uniforms.uV0.value = params.gpuV0 ? 1 : 0
 
     prismMaterial.uniforms.uPrism.value = params.prismInt
-    prismMesh.rotation.z += dt * 0.3
+    prismMesh.rotation.z += dt * (params.gpuV0 ? 0.12 : 0.3)
     starMaterial.uniforms.t.value = time
 
     const { rt: grt, postScene: gps, postCamera: gpc, viewWidth: gvw, viewHeight: gvh, canvasWidth: gcw, canvasHeight: gch } = threeScene
@@ -634,6 +743,7 @@ export function renderThreeFrame(
 
   // CPU path: hide the GPU layer, show dots/beams
   threeScene.gpuPoints.visible = false
+  threeScene.floydBeams.visible = false
   threeScene.dotPoints.visible = true
   threeScene.beamLines.visible = true
 
@@ -745,4 +855,7 @@ export function disposeThreeScene(threeScene: ThreeScene): void {
   threeScene.rt.dispose()
   threeScene.gpuPoints.geometry.dispose()
   threeScene.gpuMaterial.dispose()
+  threeScene.gpuMaskTexture.dispose()
+  threeScene.floydBeams.geometry.dispose()
+  ;(threeScene.floydBeams.material as THREE.Material).dispose()
 }
