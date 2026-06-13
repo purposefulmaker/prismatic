@@ -15,7 +15,12 @@ import {
   renderThreeFrame,
   disposeThreeScene,
 } from '@/lib/prism-engine'
-import { createShapeMask, isNodeInShape, isNodeInPlanarShape } from '@/lib/prism-engine/shape-mask'
+import {
+  createShapeMask,
+  isNodeInShape,
+  isNodeInPlanarShape,
+  isNodeInSpotlightShape,
+} from '@/lib/prism-engine/shape-mask'
 
 export interface UseThreeEngineOptions {
   nodeCount?: number
@@ -152,9 +157,13 @@ export function useThreeEngine(
 
       state.t += dt
 
+      // Spotlight mode: full Fibonacci sphere, frozen rotation, text projected
+      // planar onto the camera-facing hemisphere (always faces the viewer).
+      const isSpotlight = !!(P.spotlight && P.shapeTxt && shapeMaskRef.current)
+
       // Static lattice mode: freeze auto-rotation so the shape faces the
       // camera. Drag still applies as a fixed orientation offset.
-      const isStatic = !!(P.lattice?.enabled && P.lattice.static)
+      const isStatic = !!(P.lattice?.enabled && P.lattice.static) || isSpotlight
 
       let arx: number
       let ary: number
@@ -216,6 +225,18 @@ export function useThreeEngine(
             node.intensity = 0.5 + node.z * 0.3
           }
           if (node.intensity > 0.1) beamCount++
+        } else if (isSpotlight) {
+          // SPOTLIGHT: glyph lives on the front hemisphere (post-rotation z),
+          // planar-projected so it always faces the camera. POV persistence
+          // gives the letters their phosphor glow; the rest of the sphere
+          // keeps a faint silhouette so the Fibonacci lattice stays visible.
+          const onFront = node.z > 0.2
+          const inText =
+            onFront && isNodeInSpotlightShape(node.x, node.y, shapeMaskRef.current, P.shapeScale)
+          const input = inText ? 1.0 : 0.0
+          node.intensity = applyPovPersistence(node.intensity, input, P.tau, dt)
+          if (!inText && node.intensity < 0.07) node.intensity = 0.07
+          if (input > 0) beamCount++
         } else {
           // Standard mode: beam pattern and shape mask
           const bp = calculateBeamPattern(node, P.pattern, state.t, P, nodeCount)

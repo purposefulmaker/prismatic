@@ -7,8 +7,9 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'NOTHINGBURGER — Prismatic POV Engine',
-  description: 'Real physics visualization: Fibonacci sphere, Cauchy dispersion, Rodrigues rotation, DFT beam patterns',
+  title: 'v0 as Physics — Prismatic POV Engine · Sponsored by Vercel',
+  description:
+    'v0 rendered as physics: a 1000-node Fibonacci sphere with Cauchy dispersion, Rodrigues rotation, DFT beam patterns, and POV persistence. Sponsored by Vercel.',
   generator: 'v0.app',
   icons: {
     icon: [

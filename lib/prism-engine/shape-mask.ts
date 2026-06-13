@@ -77,6 +77,41 @@ export function isNodeInShape(
 }
 
 /**
+ * SPOTLIGHT projection: planar-map the CURRENT (post-rotation) XY of a node
+ * onto the text mask. Because it reads transformed coordinates, the glyph is
+ * locked to the viewer — drag the sphere and the text keeps facing you like
+ * a hologram. Aspect-correct for the 256×128 (2:1) texture: the horizontal
+ * UV rate is exactly half the vertical rate so letters never stretch.
+ */
+export function isNodeInSpotlightShape(
+  x: number,
+  y: number,
+  shapeMask: Uint8ClampedArray | null,
+  shapeScale: number
+): boolean {
+  if (!shapeMask) return false
+
+  // Unit sphere face spans roughly ±1 in X/Y. vRate sizes the glyph against
+  // the sphere (smaller = larger glyph); uRate = vRate/2 preserves the 2:1
+  // texture aspect so letters never stretch.
+  const vRate = 0.72 * shapeScale
+  const uRate = vRate * 0.5
+
+  // Camera sits at +Z looking at origin: +X is viewer's right, +Y is up.
+  const u = 0.5 + x * uRate
+  const v = 0.5 - y * vRate
+
+  if (u < 0 || u > 1 || v < 0 || v > 1) return false
+
+  const px = Math.floor(u * 256)
+  const py = Math.floor(v * 128)
+  if (px < 0 || px >= 256 || py < 0 || py >= 128) return false
+
+  const idx = (py * 256 + px) * 4
+  return shapeMask[idx] > 128
+}
+
+/**
  * Check if a node falls within the shape mask using FLAT planar projection.
  * Maps the node's original XY position directly onto the texture, so text
  * appears on the face of a static, camera-facing shape (e.g. the v0 triangle)

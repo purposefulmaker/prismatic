@@ -62,6 +62,9 @@ export interface PrismParameters {
   ba: number // breathing amplitude
   // Shape text
   shapeTxt: string
+  // Spotlight mode: freeze rotation and project shapeTxt planar onto the
+  // camera-facing hemisphere (hologram lock — text always faces the viewer)
+  spotlight: boolean
   // Lattice mode parameters
   lattice: LatticeParameters
   // Color mode parameters
@@ -141,8 +144,8 @@ export interface EngineStats {
   nodeCount: number
   activeBeams: number
   rpm: number
-  wavelengthRange: string
-  povTau: string
+  wavelengthRange?: string
+  povTau?: string
   fps: number
 }
 

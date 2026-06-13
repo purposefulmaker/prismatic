@@ -73,6 +73,7 @@ export const DEFAULT_PARAMETERS: PrismParameters = {
   gr: 10,
   ba: 0.04,
   shapeTxt: '',
+  spotlight: false,
   lattice: DEFAULT_LATTICE,
   color: DEFAULT_COLOR,
 }
@@ -80,9 +81,38 @@ export const DEFAULT_PARAMETERS: PrismParameters = {
 // Visual presets
 export const PRESETS: PrismPreset[] = [
   {
+    name: 'v0-spotlight',
+    label: 'V0',
+    params: {
+      tau: 0.2,
+      shapeScale: 1.0,
+      refIdx: 1.52,
+      dispersion: 0.04,
+      prismInt: 0.55,
+      rx: 0,
+      ry: 0,
+      rz: 0,
+      bc: 400,
+      bw: 1.0,
+      bo: 0.4,
+      pattern: 'all',
+      harmK: 1,
+      phaseV: 0.5,
+      dr: 2.4,
+      gr: 5,
+      ba: 0,
+      shapeTxt: 'v0',
+      spotlight: true,
+      color: { ...DEFAULT_COLOR, mode: 'single', single: '#ffffff' },
+    },
+  },
+  {
     name: 'genesis',
     label: 'GENESIS',
     params: {
+      spotlight: false,
+      shapeTxt: '',
+      color: { ...DEFAULT_COLOR },
       tau: 0.15,
       shapeScale: 1,
       refIdx: 1.52,
@@ -106,6 +136,8 @@ export const PRESETS: PrismPreset[] = [
     name: 'storm',
     label: 'STORM',
     params: {
+      spotlight: false,
+      color: { ...DEFAULT_COLOR },
       tau: 0.04,
       shapeScale: 1,
       refIdx: 1.8,
@@ -129,6 +161,8 @@ export const PRESETS: PrismPreset[] = [
     name: 'prayer',
     label: 'PRAYER',
     params: {
+      spotlight: false,
+      color: { ...DEFAULT_COLOR },
       tau: 0.25,
       shapeScale: 1,
       refIdx: 1.45,
@@ -152,6 +186,8 @@ export const PRESETS: PrismPreset[] = [
     name: 'nova',
     label: 'NOVA',
     params: {
+      spotlight: false,
+      color: { ...DEFAULT_COLOR },
       tau: 0.08,
       shapeScale: 1,
       refIdx: 1.52,
@@ -175,6 +211,8 @@ export const PRESETS: PrismPreset[] = [
     name: 'dna',
     label: 'DNA',
     params: {
+      spotlight: false,
+      color: { ...DEFAULT_COLOR },
       tau: 0.1,
       shapeScale: 1,
       refIdx: 1.52,
@@ -198,6 +236,8 @@ export const PRESETS: PrismPreset[] = [
     name: 'void',
     label: 'VOID',
     params: {
+      spotlight: false,
+      color: { ...DEFAULT_COLOR },
       tau: 0.3,
       shapeScale: 1,
       refIdx: 2.0,

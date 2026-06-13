@@ -7,8 +7,10 @@ export default function PrismPage() {
         showStats={true}
         showEquations={false}
         showControls={true}
-        defaultPanelOpen={true}
-        nodeCount={1000}
+        defaultPanelOpen={false}
+        showHero={true}
+        initialPreset="v0-spotlight"
+        nodeCount={1600}
       />
     </main>
   )
