@@ -736,7 +736,9 @@ export function renderThreeFrame(
     renderer.setRenderTarget(null)
     renderer.setViewport(0, 0, gcw, gch)
     renderer.clear()
-    renderer.setViewport(Math.floor((gcw - gvw) / 2), Math.floor((gch - gvh) / 2), gvw, gvh)
+    // viewWidth already excludes the panel; draw left-aligned so the sphere
+    // centers in the visible (non-panel) region. Panel hidden → full window.
+    renderer.setViewport(0, 0, gvw, gvh)
     renderer.render(gps, gpc)
     return GPU_NODE_COUNT
   }
@@ -830,14 +832,13 @@ export function renderThreeFrame(
   renderer.clear()
   renderer.render(scene, camera)
 
-  // ── Pass 2: tone-map HDR buffer to the screen, CENTERED ──
+  // ── Pass 2: tone-map HDR buffer to the screen ──
   renderer.setRenderTarget(null)
   renderer.setViewport(0, 0, canvasWidth, canvasHeight)
   renderer.clear()
-  // Center the rendered region in the canvas
-  const offsetX = Math.floor((canvasWidth - viewWidth) / 2)
-  const offsetY = Math.floor((canvasHeight - viewHeight) / 2)
-  renderer.setViewport(offsetX, offsetY, viewWidth, viewHeight)
+  // viewWidth already excludes the panel; draw left-aligned so the sphere
+  // centers in the visible (non-panel) region. Panel hidden → full window.
+  renderer.setViewport(0, 0, viewWidth, viewHeight)
   renderer.render(postScene, postCamera)
 
   return beamIndex
