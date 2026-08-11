@@ -631,28 +631,42 @@ export function updateViewport(
   // On desktop, reserve 300px for the side panel when it's open.
   const isMobile = width < 768
   const panelW = isMobile ? 0 : panelHidden ? 0 : 300
-  threeScene.viewWidth = Math.max(60, width - panelW)
+
+  // Render across the FULL canvas at all times, then bias the camera's optical
+  // center LEFT by panelW/2 via a projection view-offset. This centers the
+  // shape in the visible (non-panel) region using pure matrix math, so it
+  // renders identically at any devicePixelRatio (no device-pixel juggling).
+  threeScene.viewWidth = width
   threeScene.viewHeight = height
   threeScene.canvasWidth = width
   threeScene.canvasHeight = height
 
-  // Resize HDR render target to match drawing-buffer pixels of the view region
+  // HDR render target spans the full drawing buffer
   threeScene.rt.setSize(
-    Math.max(2, Math.floor(threeScene.viewWidth * dpr)),
+    Math.max(2, Math.floor(width * dpr)),
     Math.max(2, Math.floor(height * dpr))
   )
 
-  threeScene.camera.aspect = threeScene.viewWidth / height
+  threeScene.camera.aspect = width / height
+  if (panelW > 0) {
+    // Show a full-width frustum but sample it starting panelW/2 to the right,
+    // shifting rendered content left by panelW/2 → visible-region center.
+    threeScene.camera.setViewOffset(width, height, panelW / 2, 0, width, height)
+  } else {
+    threeScene.camera.clearViewOffset()
+  }
   threeScene.camera.updateProjectionMatrix()
 
+  // Size the shape against the VISIBLE region so it fits beside the panel
+  const visibleW = Math.max(60, width - panelW)
   const halfTan = Math.tan((FOV * Math.PI) / 360)
-  const targetPx = Math.min(threeScene.viewWidth, height) * 0.33
+  const targetPx = Math.min(visibleW, height) * 0.33
   threeScene.camDist = (height * 0.5) / (targetPx * halfTan) / threeScene.zoom
 
   threeScene.camera.position.set(0, 0, threeScene.camDist)
   threeScene.camera.lookAt(0, 0, 0)
 
-  threeScene.renderer.setViewport(0, 0, threeScene.viewWidth, height)
+  threeScene.renderer.setViewport(0, 0, width, height)
 
   // Update uniforms
   threeScene.dotMaterial.uniforms.uPR.value = dpr
@@ -726,19 +740,16 @@ export function renderThreeFrame(
     prismMesh.rotation.z += dt * (params.gpuV0 ? 0.12 : 0.3)
     starMaterial.uniforms.t.value = time
 
-    const { rt: grt, postScene: gps, postCamera: gpc, viewWidth: gvw, viewHeight: gvh, canvasWidth: gcw, canvasHeight: gch } = threeScene
-    const gdpr = renderer.getPixelRatio()
+    const { rt: grt, postScene: gps, postCamera: gpc, canvasWidth: gcw, canvasHeight: gch } = threeScene
+    // Full-canvas pipeline; camera view-offset handles visible-region centering
     renderer.setRenderTarget(grt)
-    renderer.setViewport(0, 0, gvw * gdpr, gvh * gdpr)
+    renderer.setViewport(0, 0, gcw, gch)
     renderer.setClearColor(0x000000, 1)
     renderer.clear()
     renderer.render(scene, camera)
     renderer.setRenderTarget(null)
     renderer.setViewport(0, 0, gcw, gch)
     renderer.clear()
-    // viewWidth already excludes the panel; draw left-aligned so the sphere
-    // centers in the visible (non-panel) region. Panel hidden → full window.
-    renderer.setViewport(0, 0, gvw, gvh)
     renderer.render(gps, gpc)
     return GPU_NODE_COUNT
   }
@@ -822,23 +833,21 @@ export function renderThreeFrame(
   // Star twinkle
   starMaterial.uniforms.t.value = time
 
-  const { rt, postScene, postCamera, viewWidth, viewHeight, canvasWidth, canvasHeight } = threeScene
-  const dpr = renderer.getPixelRatio()
+  const { rt, postScene, postCamera, canvasWidth, canvasHeight } = threeScene
 
+  // Full-canvas pipeline: the camera's view-offset (set in updateViewport)
+  // handles centering in the visible region, so both passes span the canvas.
   // ── Pass 1: render scene into HDR float buffer ──
   renderer.setRenderTarget(rt)
-  renderer.setViewport(0, 0, viewWidth * dpr, viewHeight * dpr)
+  renderer.setViewport(0, 0, canvasWidth, canvasHeight)
   renderer.setClearColor(0x000000, 1)
   renderer.clear()
   renderer.render(scene, camera)
 
-  // ── Pass 2: tone-map HDR buffer to the screen ──
+  // ── Pass 2: tone-map HDR buffer to the full screen ──
   renderer.setRenderTarget(null)
   renderer.setViewport(0, 0, canvasWidth, canvasHeight)
   renderer.clear()
-  // viewWidth already excludes the panel; draw left-aligned so the sphere
-  // centers in the visible (non-panel) region. Panel hidden → full window.
-  renderer.setViewport(0, 0, viewWidth, viewHeight)
   renderer.render(postScene, postCamera)
 
   return beamIndex
