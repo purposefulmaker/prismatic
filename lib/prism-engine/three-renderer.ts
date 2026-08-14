@@ -627,15 +627,13 @@ export function updateViewport(
   threeScene.renderer.setPixelRatio(dpr)
   threeScene.renderer.setSize(width, height)
 
-  // On mobile (< 768px), panel is a bottom-sheet overlay so use full width.
-  // On desktop, reserve 300px for the side panel when it's open.
-  const isMobile = width < 768
-  const panelW = isMobile ? 0 : panelHidden ? 0 : 300
-
-  // Render across the FULL canvas at all times, then bias the camera's optical
-  // center LEFT by panelW/2 via a projection view-offset. This centers the
-  // shape in the visible (non-panel) region using pure matrix math, so it
-  // renders identically at any devicePixelRatio (no device-pixel juggling).
+  // DETERMINISTIC CENTERING: always center the field in the FULL window, with
+  // no panel-aware view offset. The control panel is a right-side overlay; the
+  // field's optical center (world origin) sits at the true window center at all
+  // times, so it can never desync from panel open/close state or DPR. `panelHidden`
+  // is intentionally unused for positioning — it's kept in the signature so the
+  // resize/toggle callers don't need to change.
+  void panelHidden
   threeScene.viewWidth = width
   threeScene.viewHeight = height
   threeScene.canvasWidth = width
@@ -648,19 +646,13 @@ export function updateViewport(
   )
 
   threeScene.camera.aspect = width / height
-  if (panelW > 0) {
-    // Show a full-width frustum but sample it starting panelW/2 to the right,
-    // shifting rendered content left by panelW/2 → visible-region center.
-    threeScene.camera.setViewOffset(width, height, panelW / 2, 0, width, height)
-  } else {
-    threeScene.camera.clearViewOffset()
-  }
+  // No sub-window sampling — the origin projects to the exact center of the canvas.
+  threeScene.camera.clearViewOffset()
   threeScene.camera.updateProjectionMatrix()
 
-  // Size the shape against the VISIBLE region so it fits beside the panel
-  const visibleW = Math.max(60, width - panelW)
+  // Size the shape against the full window (min of width/height keeps it framed)
   const halfTan = Math.tan((FOV * Math.PI) / 360)
-  const targetPx = Math.min(visibleW, height) * 0.33
+  const targetPx = Math.min(width, height) * 0.33
   threeScene.camDist = (height * 0.5) / (targetPx * halfTan) / threeScene.zoom
 
   threeScene.camera.position.set(0, 0, threeScene.camDist)

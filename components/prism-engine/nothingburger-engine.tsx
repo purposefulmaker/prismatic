@@ -85,11 +85,15 @@ export function NothingburgerEngine({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Sync panel state
-  const handlePanelToggle = () => {
-    setPanelOpen(v => !v)
+  // Single source of truth: panelOpen. Keep the engine's panelHidden flag
+  // (which drives the render centering offset) always mirroring it — on mount
+  // AND on every change — so the shape can never be offset for a panel state
+  // that isn't actually on screen.
+  useEffect(() => {
     setPanelHidden(!panelOpen)
-  }
+  }, [panelOpen, setPanelHidden])
+
+  const handlePanelToggle = () => setPanelOpen(v => !v)
 
   const inField = !!params.gpuMode && !params.gpuPrism
   const inPrism = !!params.gpuMode && !!params.gpuPrism
