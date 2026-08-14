@@ -1,33 +1,93 @@
-# prismatic
+# The Beautiful Necessity
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [v0](https://v0.app).
+**The Field Perceptionist presents** — a real-time prismatic physics engine that renders a field of light as a rotating Fibonacci lattice, decomposing a single white beam into the full spectrum through simulated optical dispersion.
 
-## Built with v0
+> Seeing the field · Feeling the field · Being the field
+> _All signals return home._
 
-This repository is linked to a [v0](https://v0.app) project. You can continue developing by visiting the link below -- start new chats to make changes, and v0 will push commits directly to this repo. Every merge to `main` will automatically deploy.
+Built with Next.js 16, React 19, Three.js (WebGL), and Tailwind CSS v4.
 
-[Continue working on v0 →](https://v0.app/chat/projects/prj_RACgJfPcWHLIcKW6fuXMGYgY0fWs)
+---
 
-## Getting Started
+## What it is
 
-First, run the development server:
+The Beautiful Necessity is an interactive visual instrument. Points of light are placed on a sphere using the Fibonacci golden-angle distribution, then lit by traveling interference patterns and colored by wavelength through a simulated prism. Everything you see is driven by actual physics equations, not decorative noise:
+
+- **Wavelength → RGB** across the 380–700 nm visible spectrum (CIE-style piecewise approximation)
+- **Cauchy dispersion** — refraction index varies with wavelength, `n(λ) = A + B/λ²`
+- **Snell's law** refraction angles, with total-internal-reflection handling
+- **Rodrigues rotation** for smooth 3D rotation about arbitrary axes
+- **DFT / Gabor / Sinc / Helix / Fibonacci** beam-selection patterns
+- **POV persistence** — exponential intensity decay, `V(t) = V·e^(−dt/τ) + input·(1−e^(−dt/τ))`
+
+## The three modes
+
+| Mode | Renderer | What happens |
+|------|----------|--------------|
+| **THE FIELD** | GPU (WebGL shader) | 30,000 nodes with all warp, rotation, color, and interference math computed per-node in the vertex shader — zero CPU node loop. |
+| **PRISM** | GPU (WebGL shader) | Pink Floyd mode: a single white beam enters the prism and fans out into the spectrum across the mesh. Pure dispersion. |
+| **DISCO** | CPU (Three.js points) | The classic path — ~1,600 nodes with full control over color modes, volumetric lattice shells, beam physics, and DFT patterns. |
+
+The control panel is **mode-aware**: it only shows the sliders that actually drive the active renderer, so every visible control produces a visible change.
+
+## Controls
+
+**Field / GPU** — Reality Warp, Hue Drift, Spin, Interference k, Wave Velocity, Node Size, Prism Intensity.
+
+**Central Prism** — Refraction Index and Dispersion shape the spectral coloring (visible in **Spectrum** color mode); Prism Intensity always applies.
+
+**Lattice Mode** — Shape (Sphere / Pyramid / Cube / Diamond / Star), Base Polygon (Tri / Quad / Hex), Shells, Edge Width, Edge Opacity, Inner Glow. Builds concentric volumetric shells connected by lit edges.
+
+**Beam Physics / DFT** — Beam Count, Width, Opacity, and pattern selection (DFT, Gabor, Helix, Sinc, Fibonacci, All).
+
+## Project structure
+
+```
+app/
+  layout.tsx              Metadata, fonts, root layout
+  page.tsx                Mounts the engine
+  icon.png                Favicon (mandala)
+components/prism-engine/
+  nothingburger-engine.tsx  Top-level component: canvas + hero overlay + panel
+  prism-control-panel.tsx   Mode-aware control panel
+hooks/
+  use-three-engine.ts     RAF loop, node build, mask upload, param plumbing
+lib/prism-engine/
+  physics.ts              Fibonacci sphere, dispersion, Snell, Rodrigues, DFT, POV
+  three-renderer.ts       Active WebGL renderer (GPU + CPU point paths, shaders)
+  renderer.ts             Legacy Canvas2D renderer (reference)
+  lattice.ts              Volumetric shells, SDF shapes, edge building
+  color.ts                Wavelength/spectrum/palette/gradient color resolution
+  shape-mask.ts           Text → node mask
+  constants.ts            Presets, defaults, golden ratio
+  types.ts                PrismParameters, PrismNode, EngineState
+```
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Other scripts:
 
-## Learn More
+```bash
+pnpm build   # production build
+pnpm start   # serve the build
+pnpm lint    # eslint
+```
 
-To learn more, take a look at the following resources:
+## Tech
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-- [v0 Documentation](https://v0.app/docs) - learn about v0 and how to use it.
+- **Next.js 16** (App Router) · **React 19**
+- **Three.js** ~0.184 for the WebGL render path, with custom GLSL vertex/fragment shaders
+- **Tailwind CSS v4** with a dark, monospace, spectral theme
+- **TypeScript** throughout
+
+## Notes
+
+- The engine renders across the full canvas and uses `camera.setViewOffset()` to bias the optical center into the visible region, so the field stays centered whether the control panel is open or closed, at any device pixel ratio.
+- On mobile the control panel becomes a bottom sheet and the field uses the full width.
