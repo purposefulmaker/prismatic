@@ -486,36 +486,38 @@ export function PrismControlPanel({
           THE FIELD PERCEPTIONIST
         </div>
 
-        {/* POV Shape */}
-        <Section title="◇ POV SHAPE FORMATION">
-          <input
-            type="text"
-            value={params.shapeTxt}
-            onChange={e => onShapeTextChange(e.target.value)}
-            placeholder="TYPE TO FORM (e.g. CAT)"
-            maxLength={8}
-            spellCheck={false}
-            className="w-full bg-white/6 border border-white/15 text-white font-mono text-xs p-2
-              rounded-sm text-center tracking-[2px] mt-1.5 outline-none focus:border-white/40
-              placeholder:text-white/20"
-          />
-          <ControlRow label="POV Persistence (τ)" value={params.tau.toFixed(2)}>
-            <PrismSlider
-              value={params.tau * 100}
-              min={1}
-              max={60}
-              onChange={v => onParamChange('tau', v / 100)}
+        {/* POV Shape — CPU (DISCO) mode only; GPU field has no glyph projection */}
+        {!params.gpuMode && (
+          <Section title="◇ POV SHAPE FORMATION">
+            <input
+              type="text"
+              value={params.shapeTxt}
+              onChange={e => onShapeTextChange(e.target.value)}
+              placeholder="TYPE TO FORM (e.g. CAT)"
+              maxLength={8}
+              spellCheck={false}
+              className="w-full bg-white/6 border border-white/15 text-white font-mono text-xs p-2
+                rounded-sm text-center tracking-[2px] mt-1.5 outline-none focus:border-white/40
+                placeholder:text-white/20"
             />
-          </ControlRow>
-          <ControlRow label="Shape Scale" value={params.shapeScale.toFixed(1)}>
-            <PrismSlider
-              value={params.shapeScale * 10}
-              min={2}
-              max={30}
-              onChange={v => onParamChange('shapeScale', v / 10)}
-            />
-          </ControlRow>
-        </Section>
+            <ControlRow label="POV Persistence (τ)" value={params.tau.toFixed(2)}>
+              <PrismSlider
+                value={params.tau * 100}
+                min={1}
+                max={60}
+                onChange={v => onParamChange('tau', v / 100)}
+              />
+            </ControlRow>
+            <ControlRow label="Shape Scale" value={params.shapeScale.toFixed(1)}>
+              <PrismSlider
+                value={params.shapeScale * 10}
+                min={2}
+                max={30}
+                onChange={v => onParamChange('shapeScale', v / 10)}
+              />
+            </ControlRow>
+          </Section>
+        )}
 
         {/* THE FIELD — GPU tier */}
         <Section title="⌁ THE FIELD · GPU">
@@ -574,10 +576,49 @@ export function PrismControlPanel({
                   onChange={v => onParamChange('gpuSpin', v / 10)}
                 />
               </ControlRow>
+
+              {/* Shared params that DO drive the GPU field render */}
+              <div className="text-[8px] text-white/35 mb-1.5 mt-3">FIELD DYNAMICS</div>
+              <ControlRow label="Interference k" value={params.harmK}>
+                <PrismSlider
+                  value={params.harmK}
+                  min={1}
+                  max={32}
+                  onChange={v => onParamChange('harmK', v)}
+                />
+              </ControlRow>
+              <ControlRow label="Wave Velocity" value={params.phaseV.toFixed(1)}>
+                <PrismSlider
+                  value={params.phaseV * 10}
+                  min={0}
+                  max={100}
+                  onChange={v => onParamChange('phaseV', v / 10)}
+                />
+              </ControlRow>
+              <ControlRow label="Node Size" value={params.dr.toFixed(1)}>
+                <PrismSlider
+                  value={params.dr * 10}
+                  min={5}
+                  max={80}
+                  onChange={v => onParamChange('dr', v / 10)}
+                />
+              </ControlRow>
+              <ControlRow label="Prism Intensity" value={params.prismInt.toFixed(1)}>
+                <PrismSlider
+                  value={params.prismInt * 10}
+                  min={1}
+                  max={30}
+                  onChange={v => onParamChange('prismInt', v / 10)}
+                />
+              </ControlRow>
             </>
           )}
         </Section>
 
+        {/* CPU (DISCO) mode controls — these drive the CPU node loop, which is
+            bypassed in GPU mode, so they are hidden while THE FIELD/PRISM run */}
+        {!params.gpuMode && (
+          <>
         {/* Color Mode */}
         <ColorSection color={params.color} onColorChange={onColorChange} />
 
@@ -822,6 +863,8 @@ export function PrismControlPanel({
             />
           </ControlRow>
         </Section>
+          </>
+        )}
 
         {/* Presets */}
         <Section title="★ PRESETS">
