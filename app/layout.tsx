@@ -7,10 +7,9 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'v0 as Physics — Prismatic POV Engine · Sponsored by Vercel',
+  title: 'The Field Perceptionist presents — The Beautiful Necessity',
   description:
-    'v0 rendered as physics: a 1000-node Fibonacci sphere with Cauchy dispersion, Rodrigues rotation, DFT beam patterns, and POV persistence. Sponsored by Vercel.',
-  generator: 'v0.app',
+    'The Beautiful Necessity: a living field rendered as physics — a Fibonacci lattice on the golden angle, Cauchy dispersion, Rodrigues rotation, and POV persistence. Seeing the field. Feeling the field. Being the field.',
   icons: {
     icon: [
       {

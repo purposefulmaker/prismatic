@@ -480,10 +480,10 @@ export function PrismControlPanel({
             backgroundClip: 'text',
           }}
         >
-          MATH DISCO ENGINE
+          THE BEAUTIFUL NECESSITY
         </div>
         <div className="text-[8px] text-white/30 text-center tracking-[2px] mb-3.5">
-          PRISMATIC POV
+          THE FIELD PERCEPTIONIST
         </div>
 
         {/* POV Shape */}
@@ -517,8 +517,8 @@ export function PrismControlPanel({
           </ControlRow>
         </Section>
 
-        {/* REALITY BENDER — GPU tier */}
-        <Section title="⌁ REALITY BENDER · GPU">
+        {/* THE FIELD — GPU tier */}
+        <Section title="⌁ THE FIELD · GPU">
           <div className="flex items-center justify-between mb-2">
             <label className="text-[9px] text-white/50">GPU Mode (30k nodes)</label>
             <button
@@ -537,17 +537,17 @@ export function PrismControlPanel({
           {params.gpuMode && (
             <>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-[9px] text-white/50">V0 Prism (Floyd)</label>
+                <label className="text-[9px] text-white/50">Prism (Floyd)</label>
                 <button
-                  onClick={() => onParamChange('gpuV0', !params.gpuV0)}
+                  onClick={() => onParamChange('gpuPrism', !params.gpuPrism)}
                   className={cn(
                     'px-3 py-1 text-[8px] tracking-[1px] rounded-sm border transition-all',
-                    params.gpuV0
+                    params.gpuPrism
                       ? 'bg-white/20 border-white/40 text-white'
                       : 'bg-white/4 border-white/10 text-white/40'
                   )}
                 >
-                  {params.gpuV0 ? 'ON' : 'OFF'}
+                  {params.gpuPrism ? 'ON' : 'OFF'}
                 </button>
               </div>
               <ControlRow label="Reality Warp" value={params.gpuWarp.toFixed(2)}>

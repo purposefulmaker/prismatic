@@ -724,7 +724,8 @@ export function renderThreeFrame(
     gpuPoints.visible = true
     dotPoints.visible = false
     beamLines.visible = false
-    floydBeams.visible = !!params.gpuV0
+    // PRISM mode shows the single-white-light-to-spectrum fan
+    floydBeams.visible = !!params.gpuPrism
 
     gpuMaterial.uniforms.uTime.value = time
     gpuMaterial.uniforms.uPR.value = renderer.getPixelRatio()
@@ -734,10 +735,11 @@ export function renderThreeFrame(
     gpuMaterial.uniforms.uWarp.value = params.gpuWarp
     gpuMaterial.uniforms.uHueShift.value = params.gpuHue
     gpuMaterial.uniforms.uSpin.value = params.gpuSpin
-    gpuMaterial.uniforms.uV0.value = params.gpuV0 ? 1 : 0
+    // No text-glyph projection in this build — keep the mesh spectral
+    gpuMaterial.uniforms.uV0.value = 0
 
     prismMaterial.uniforms.uPrism.value = params.prismInt
-    prismMesh.rotation.z += dt * (params.gpuV0 ? 0.12 : 0.3)
+    prismMesh.rotation.z += dt * (params.gpuPrism ? 0.12 : 0.3)
     starMaterial.uniforms.t.value = time
 
     const { rt: grt, postScene: gps, postCamera: gpc, canvasWidth: gcw, canvasHeight: gch } = threeScene

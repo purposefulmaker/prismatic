@@ -72,8 +72,10 @@ export interface PrismParameters {
   gpuWarp: number // surface warp amplitude (0-0.6)
   gpuHue: number // hue drift rate through time (0-0.2)
   gpuSpin: number // rotation speed multiplier (0-3)
-  // V0 PRISM: Pink Floyd mode — frozen mesh, white beam into the prism,
-  // spectral fan out, "v0" projected in rainbow across the front hemisphere
+  // PRISM: Pink Floyd mode — single white beam into the prism, spectral fan
+  // out across the mesh. Pure dispersion, no text glyph.
+  gpuPrism: boolean
+  // (legacy) text-glyph projection onto the prism fan — unused in this build
   gpuV0: boolean
   // Lattice mode parameters
   lattice: LatticeParameters

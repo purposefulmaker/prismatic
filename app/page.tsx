@@ -9,7 +9,7 @@ export default function PrismPage() {
         showControls={true}
         defaultPanelOpen={false}
         showHero={true}
-        initialPreset="v0-spotlight"
+        initialPreset="the-field"
         nodeCount={1600}
       />
     </main>

@@ -23,9 +23,9 @@ export interface NothingburgerEngineProps {
   showControls?: boolean
   /** Initial panel open state */
   defaultPanelOpen?: boolean
-  /** Show the v0 spotlight hero overlay (title + mode switch + sponsor badge) */
+  /** Show the hero overlay (title + mode switch + refrain) */
   showHero?: boolean
-  /** Apply a named preset on mount (e.g. 'v0-spotlight') */
+  /** Apply a named preset on mount (e.g. 'the-field') */
   initialPreset?: string
   /** Custom class for the container */
   className?: string
@@ -79,7 +79,7 @@ export function NothingburgerEngine({
     nodeCount,
   })
 
-  // Apply a named preset once on mount (e.g. boot straight into V0 spotlight)
+  // Apply a named preset once on mount (e.g. boot straight into THE FIELD)
   useEffect(() => {
     if (initialPreset) applyPreset(initialPreset)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -91,9 +91,9 @@ export function NothingburgerEngine({
     setPanelHidden(!panelOpen)
   }
 
-  const inSpotlight = !!params.spotlight
-  const inBenderV0 = !!params.gpuMode && !!params.gpuV0
-  const inBender = !!params.gpuMode && !params.gpuV0
+  const inField = !!params.gpuMode && !params.gpuPrism
+  const inPrism = !!params.gpuMode && !!params.gpuPrism
+  const inDisco = !params.gpuMode
 
   return (
     <div className={className}>
@@ -104,87 +104,71 @@ export function NothingburgerEngine({
         style={{ touchAction: 'none' }}
       />
 
-      {/* v0 Spotlight hero overlay */}
+      {/* The Field Perceptionist hero overlay */}
       {showHero && (
         <>
           {/* Top: title + mode switch */}
           <div className="pointer-events-none fixed inset-x-0 top-0 z-40 flex flex-col items-center gap-3 pt-6 md:pt-10">
-            <h1 className="font-mono text-sm md:text-base tracking-[0.5em] text-white/90 text-balance">
-              v0 AS PHYSICS
+            <p className="font-mono text-[8px] md:text-[9px] tracking-[0.45em] text-white/30 text-balance">
+              THE FIELD PERCEPTIONIST PRESENTS
+            </p>
+            <h1 className="font-mono text-base md:text-xl tracking-[0.4em] text-white/90 text-balance">
+              THE BEAUTIFUL NECESSITY
             </h1>
             <p className="font-mono text-[9px] md:text-[10px] tracking-[0.3em] text-white/35 text-balance">
-              FIBONACCI LATTICE · GOLDEN ANGLE · POV PERSISTENCE
+              SEEING THE FIELD · FEELING THE FIELD · BEING THE FIELD
             </p>
             <div className="pointer-events-auto mt-1 flex flex-wrap justify-center gap-2">
               <button
-                onClick={() => applyPreset('v0-spotlight')}
+                onClick={() => applyPreset('the-field')}
                 className={
                   'font-mono text-[10px] tracking-[0.2em] px-4 py-1.5 rounded-full border transition-colors ' +
-                  (inSpotlight
+                  (inField
                     ? 'border-white/80 bg-white text-black'
                     : 'border-white/20 bg-transparent text-white/60 hover:border-white/50 hover:text-white')
                 }
               >
-                SPOTLIGHT
+                THE FIELD
+              </button>
+              <button
+                onClick={() => applyPreset('prism')}
+                className={
+                  'font-mono text-[10px] tracking-[0.2em] px-4 py-1.5 rounded-full border transition-colors ' +
+                  (inPrism
+                    ? 'border-white/80 bg-white text-black'
+                    : 'border-white/20 bg-transparent text-white/60 hover:border-white/50 hover:text-white')
+                }
+              >
+                PRISM
               </button>
               <button
                 onClick={() => applyPreset('genesis')}
                 className={
                   'font-mono text-[10px] tracking-[0.2em] px-4 py-1.5 rounded-full border transition-colors ' +
-                  (!inSpotlight && !params.gpuMode
+                  (inDisco
                     ? 'border-white/80 bg-white text-black'
                     : 'border-white/20 bg-transparent text-white/60 hover:border-white/50 hover:text-white')
                 }
               >
                 DISCO
               </button>
-              <button
-                onClick={() => applyPreset('reality-bender')}
-                className={
-                  'font-mono text-[10px] tracking-[0.2em] px-4 py-1.5 rounded-full border transition-colors ' +
-                  (inBender
-                    ? 'border-white/80 bg-white text-black'
-                    : 'border-white/20 bg-transparent text-white/60 hover:border-white/50 hover:text-white')
-                }
-              >
-                REALITY BENDER
-              </button>
-              <button
-                onClick={() => applyPreset('v0-prism')}
-                className={
-                  'font-mono text-[10px] tracking-[0.2em] px-4 py-1.5 rounded-full border transition-colors ' +
-                  (inBenderV0
-                    ? 'border-white/80 bg-white text-black'
-                    : 'border-white/20 bg-transparent text-white/60 hover:border-white/50 hover:text-white')
-                }
-              >
-                V0 PRISM
-              </button>
             </div>
-            {inBender && (
+            {inField && (
               <p className="font-mono text-[8px] tracking-[0.25em] text-white/30">
-                GPU TIER · 30,000 NODES · ZERO CPU LOOP
+                GPU TIER · 30,000 NODES · ALL SIGNALS RETURN HOME
               </p>
             )}
-            {inBenderV0 && (
+            {inPrism && (
               <p className="font-mono text-[8px] tracking-[0.25em] text-white/30">
-                ONE WHITE LIGHT · NTH SPECTRUM · 30,000 NODES
+                ONE WHITE LIGHT · INTO THE NTH SPECTRUM
               </p>
             )}
           </div>
 
-          {/* Bottom-left: sponsored by Vercel */}
-          <a
-            href="https://vercel.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="fixed bottom-20 left-3 md:bottom-3 z-40 flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3 py-1.5 font-mono text-[9px] tracking-[0.15em] text-white/50 transition-colors hover:border-white/30 hover:text-white/90"
-          >
-            <svg width="11" height="10" viewBox="0 0 76 65" fill="currentColor" aria-hidden="true">
-              <path d="M37.5274 0L75.0548 65H0L37.5274 0Z" />
-            </svg>
-            SPONSORED BY VERCEL
-          </a>
+          {/* Bottom: the closing refrain */}
+          <p className="pointer-events-none fixed bottom-4 left-0 right-0 z-40 text-center font-mono text-[8px] md:text-[9px] tracking-[0.35em] text-white/25 text-balance">
+            ALL SIGNALS RETURN HOME
+          </p>
         </>
       )}
 
