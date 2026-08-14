@@ -108,21 +108,21 @@ export function NothingburgerEngine({
       {showHero && (
         <>
           {/* Top: title + mode switch */}
-          <div className="pointer-events-none fixed inset-x-0 top-0 z-40 flex flex-col items-center gap-3 pt-6 md:pt-10">
-            <p className="font-mono text-[8px] md:text-[9px] tracking-[0.45em] text-white/30 text-balance">
+          <div className="pointer-events-none fixed inset-x-0 top-0 z-40 flex flex-col items-center gap-2 md:gap-3 px-4 pt-14 md:pt-10">
+            <p className="font-mono text-[7px] md:text-[9px] tracking-[0.25em] md:tracking-[0.45em] text-white/30 text-center text-pretty">
               THE FIELD PERCEPTIONIST PRESENTS
             </p>
-            <h1 className="font-mono text-base md:text-xl tracking-[0.4em] text-white/90 text-balance">
+            <h1 className="font-mono text-sm md:text-xl tracking-[0.18em] md:tracking-[0.4em] text-white/90 text-center text-balance">
               THE BEAUTIFUL NECESSITY
             </h1>
-            <p className="font-mono text-[9px] md:text-[10px] tracking-[0.3em] text-white/35 text-balance">
+            <p className="font-mono text-[8px] md:text-[10px] tracking-[0.15em] md:tracking-[0.3em] text-white/35 text-center text-pretty max-w-[22rem] md:max-w-none">
               SEEING THE FIELD · FEELING THE FIELD · BEING THE FIELD
             </p>
-            <div className="pointer-events-auto mt-1 flex flex-wrap justify-center gap-2">
+            <div className="pointer-events-auto mt-1 flex flex-wrap justify-center gap-1.5 md:gap-2">
               <button
                 onClick={() => applyPreset('the-field')}
                 className={
-                  'font-mono text-[10px] tracking-[0.2em] px-4 py-1.5 rounded-full border transition-colors ' +
+                  'font-mono text-[9px] md:text-[10px] tracking-[0.15em] md:tracking-[0.2em] px-3 md:px-4 py-1.5 rounded-full border transition-colors ' +
                   (inField
                     ? 'border-white/80 bg-white text-black'
                     : 'border-white/20 bg-transparent text-white/60 hover:border-white/50 hover:text-white')
@@ -133,7 +133,7 @@ export function NothingburgerEngine({
               <button
                 onClick={() => applyPreset('prism')}
                 className={
-                  'font-mono text-[10px] tracking-[0.2em] px-4 py-1.5 rounded-full border transition-colors ' +
+                  'font-mono text-[9px] md:text-[10px] tracking-[0.15em] md:tracking-[0.2em] px-3 md:px-4 py-1.5 rounded-full border transition-colors ' +
                   (inPrism
                     ? 'border-white/80 bg-white text-black'
                     : 'border-white/20 bg-transparent text-white/60 hover:border-white/50 hover:text-white')
@@ -144,7 +144,7 @@ export function NothingburgerEngine({
               <button
                 onClick={() => applyPreset('genesis')}
                 className={
-                  'font-mono text-[10px] tracking-[0.2em] px-4 py-1.5 rounded-full border transition-colors ' +
+                  'font-mono text-[9px] md:text-[10px] tracking-[0.15em] md:tracking-[0.2em] px-3 md:px-4 py-1.5 rounded-full border transition-colors ' +
                   (inDisco
                     ? 'border-white/80 bg-white text-black'
                     : 'border-white/20 bg-transparent text-white/60 hover:border-white/50 hover:text-white')
@@ -154,12 +154,12 @@ export function NothingburgerEngine({
               </button>
             </div>
             {inField && (
-              <p className="font-mono text-[8px] tracking-[0.25em] text-white/30">
+              <p className="font-mono text-[7px] md:text-[8px] tracking-[0.15em] md:tracking-[0.25em] text-white/30 text-center text-pretty">
                 GPU TIER · 30,000 NODES · ALL SIGNALS RETURN HOME
               </p>
             )}
             {inPrism && (
-              <p className="font-mono text-[8px] tracking-[0.25em] text-white/30">
+              <p className="font-mono text-[7px] md:text-[8px] tracking-[0.15em] md:tracking-[0.25em] text-white/30 text-center text-pretty">
                 ONE WHITE LIGHT · INTO THE NTH SPECTRUM
               </p>
             )}
