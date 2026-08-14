@@ -713,6 +713,12 @@ export function PrismControlPanel({
 
         {/* Prism */}
         <Section title="◈ CENTRAL PRISM">
+          {params.color.mode !== 'spectrum' && (
+            <div className="text-[8px] text-white/35 mb-1.5 leading-relaxed">
+              Refraction & Dispersion shape the SPECTRUM coloring — switch Color
+              mode to Spectrum to see them bend the light.
+            </div>
+          )}
           <ControlRow label="Refraction Index" value={params.refIdx.toFixed(2)}>
             <PrismSlider
               value={params.refIdx * 100}

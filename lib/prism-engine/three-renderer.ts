@@ -784,7 +784,13 @@ export function renderThreeFrame(
     // Beam from prism center to lit dots
     if (n.intensity > 0.05 && n.z > -0.35) {
       const depth = (n.z + 1) / 2
-      const alpha = n.intensity * params.bo * depth * (0.4 + params.bw * 0.3)
+      // In lattice mode the beams ARE the lattice's connective edges, so the
+      // Edge Width / Edge Opacity controls modulate them here (WebGL can't vary
+      // per-segment line width, so edgeWidth boosts the additive glow instead).
+      const edgeFactor = params.lattice?.enabled
+        ? params.lattice.edgeOpacity * (0.4 + params.lattice.edgeWidth * 0.45)
+        : 1
+      const alpha = n.intensity * params.bo * depth * (0.4 + params.bw * 0.3) * edgeFactor
       const j = beamIndex * 6
 
       // Start at center
