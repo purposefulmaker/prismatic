@@ -861,19 +861,34 @@ export function renderThreeFrame(
   return beamIndex
 }
 
+// Dispose EVERY GPU-backed resource. We traverse both the main scene and the
+// post-processing scene so nothing leaks — including objects that were added
+// anonymously (the starfield) or whose geometry was never tracked on the
+// ThreeScene object (prism, post quad). Traversal makes this future-proof: any
+// mesh added later is torn down automatically.
+function disposeSceneGraph(scene: THREE.Scene): void {
+  scene.traverse(obj => {
+    const mesh = obj as THREE.Mesh & { geometry?: THREE.BufferGeometry; material?: THREE.Material | THREE.Material[] }
+    if (mesh.geometry) mesh.geometry.dispose()
+    if (mesh.material) {
+      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+      for (const m of mats) m.dispose()
+    }
+  })
+  scene.clear()
+}
+
 export function disposeThreeScene(threeScene: ThreeScene): void {
-  threeScene.renderer.dispose()
-  threeScene.dotGeometry.dispose()
-  threeScene.dotMaterial.dispose()
-  threeScene.beamGeometry.dispose()
-  threeScene.beamMaterial.dispose()
-  threeScene.prismMaterial.dispose()
-  threeScene.starMaterial.dispose()
-  threeScene.toneMaterial.dispose()
-  threeScene.rt.dispose()
-  threeScene.gpuPoints.geometry.dispose()
-  threeScene.gpuMaterial.dispose()
+  // 1. Geometries + materials for every object in both scene graphs.
+  disposeSceneGraph(threeScene.scene)
+  disposeSceneGraph(threeScene.postScene)
+
+  // 2. Standalone GPU resources not reachable via scene traversal.
   threeScene.gpuMaskTexture.dispose()
-  threeScene.floydBeams.geometry.dispose()
-    ; (threeScene.floydBeams.material as THREE.Material).dispose()
+  threeScene.rt.dispose()
+
+  // 3. Release the renderer and forcibly drop the WebGL context so the driver
+  //    frees VRAM immediately instead of waiting on GC finalization.
+  threeScene.renderer.dispose()
+  threeScene.renderer.forceContextLoss()
 }
