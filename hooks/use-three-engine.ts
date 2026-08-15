@@ -16,6 +16,7 @@ import {
   disposeThreeScene,
   updateGpuMask,
 } from '@/lib/prism-engine'
+import { applyLatentGeometry, lawsField, lawsColor } from '@/lib/prism-engine/laws'
 import {
   createShapeMask,
   isNodeInShape,
@@ -213,20 +214,35 @@ export function useThreeEngine(
 
       // Transform nodes and calculate
       let beamCount = 0
+      // Bidirectional flux: odd-index nodes ride the conjugate rotation R(−ωt).
+      // Parity on the Fibonacci index interleaves the two populations evenly
+      // over the sphere — two full fields, opposite hands, one lattice.
+      const bidi = !!P.counter && !isStatic && !isVolumetric
       for (const node of activeNodes) {
-        // Rodrigues rotation
-        const [rx, ry, rz] = rodriguesRotate(node.ox, node.oy, node.oz, arx, ary, arz)
+        // Rodrigues rotation (sign-flipped for the counter-current)
+        const dir = bidi && (node.idx & 1) === 1 ? -1 : 1
+        const [rx, ry, rz] = rodriguesRotate(node.ox, node.oy, node.oz, arx * dir, ary * dir, arz * dir)
         node.x = rx
         node.y = ry
         node.z = rz
 
+        // LATENT GEOMETRY — condense the cloud onto N great meridians
+        if (!isVolumetric && !isStatic && P.lawLatentAmt > 0 && P.lawLatentN >= 3) {
+          const [lx, ly, lz] = applyLatentGeometry(rx, ry, rz, P.lawLatentN, P.lawLatentAmt)
+          node.x = lx
+          node.y = ly
+          node.z = lz
+        }
+
         // Resolve color based on active color mode
         const [cr, cg, cb] = resolveNodeColor(node, P.color, P.refIdx, P.dispersion)
 
-        // Store base color
-        node.r = cr
-        node.g = cg
-        node.b = cb
+        // Store base color, passed through the color laws
+        // (Polarity, Trinity, Diversity in Monotony)
+        const [lcr, lcg, lcb] = lawsColor(cr, cg, cb, node.y, node.idx, P)
+        node.r = lcr
+        node.g = lcg
+        node.b = lcb
 
         if (isVolumetric) {
           // Volumetric mode: project text onto the shape.
@@ -266,7 +282,10 @@ export function useThreeEngine(
           // Standard mode: beam pattern and shape mask
           const bp = calculateBeamPattern(node, P.pattern, state.t, P, nodeCount)
           const inShape = isNodeInShape(node, shapeMaskRef.current, P.shapeScale)
-          const input = bp && inShape ? 1.0 : 0.0
+          // THE LAWS — Consonance, Balance, Rhythmic Change, Radiation,
+          // the Vesica, and Frozen Music multiply the field
+          const lawL = lawsField(node.x, node.y, node.z, state.t, P)
+          const input = (bp && inShape ? 1.0 : 0.0) * lawL
           node.intensity = applyPovPersistence(node.intensity, input, P.tau, dt)
           if (input > 0) beamCount++
         }

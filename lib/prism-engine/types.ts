@@ -65,6 +65,29 @@ export interface PrismParameters {
   // Spotlight mode: freeze rotation and project shapeTxt planar onto the
   // camera-facing hemisphere (hologram lock — text always faces the viewer)
   spotlight: boolean
+  // BIDIRECTIONAL FLUX: split the field into two interleaved populations,
+  // one riding R(+ωt), the other R(−ωt) — the conjugate pair. Form appears
+  // as the standing agreement of two opposed currents.
+  counter: boolean
+  // CHAMBER: counter-rotating star tetrahedron; tetractys points on every
+  // face stepped by the 3-6-9-18-36-18-9-6 cycle; octahedral core left void.
+  chamber: boolean
+  // PUMP: Jerry's weave — 6+6 counter-rotating strands, flow as light
+  pump: boolean
+  // THE LAWS of The Beautiful Necessity — see lib/prism-engine/laws.ts
+  lawPolarity: number
+  lawTrinity: number
+  lawConsonance: number
+  lawDiversity: number
+  lawBalance: number
+  lawRhythm: number
+  lawRadiation: number
+  lawVesica: number
+  lawLatentN: number
+  lawLatentAmt: number
+  lawIntervalP: number
+  lawIntervalQ: number
+  lawIntervalAmt: number
   // REALITY BENDER: full GPU tier — 30k nodes, all per-node math (warp,
   // rotation, color, interference) in the vertex shader, zero CPU node loop
   gpuMode: boolean

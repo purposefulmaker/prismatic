@@ -132,7 +132,7 @@ void main() {
 // updates a handful of uniforms. This is what lets node counts hit 30k+.
 const GPU_VERTEX = `
 attribute float aSeed;
-uniform float uTime, uPR, uSize, uHarmK, uPhaseV, uWarp, uHueShift, uSpin, uV0;
+uniform float uTime, uPR, uSize, uHarmK, uPhaseV, uWarp, uHueShift, uSpin, uV0, uCounter;
 uniform sampler2D uMask;
 varying vec3 vCol;
 varying float vInt;
@@ -156,8 +156,9 @@ void main() {
   p *= warp;
 
   // GPU rotation (Y then X axis), scaled by spin control
-  float ay = uTime * 0.22 * uSpin * live;
-  float ax = uTime * 0.09 * uSpin * live;
+  float sdir = (uCounter > 0.5 && aSeed < 0.5) ? -1.0 : 1.0;
+  float ay = uTime * 0.22 * uSpin * live * sdir;
+  float ax = uTime * 0.09 * uSpin * live * sdir;
   float cy = cos(ay), sy = sin(ay);
   p = vec3(p.x * cy + p.z * sy, p.y, -p.x * sy + p.z * cy);
   float cx = cos(ax), sx = sin(ax);
@@ -285,6 +286,8 @@ export interface ThreeScene {
   viewHeight: number
   canvasWidth: number
   canvasHeight: number
+  chamber: ChamberRig
+  pump: PumpRig
 }
 
 const FOV = 50
@@ -399,6 +402,7 @@ export function createThreeScene(canvas: HTMLCanvasElement, nodeCount: number): 
       uWarp: { value: 0.16 },
       uHueShift: { value: 0.02 },
       uSpin: { value: 1.0 },
+      uCounter: { value: 0.0 },
       uV0: { value: 0 },
       uMask: { value: gpuMaskTexture },
     },
@@ -580,8 +584,15 @@ export function createThreeScene(canvas: HTMLCanvasElement, nodeCount: number): 
   const postQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), toneMaterial)
   postScene.add(postQuad)
 
+  const chamber = createChamberRig()
+  scene.add(chamber.group)
+  const pump = createPumpRig()
+  scene.add(pump.group)
+
   return {
     renderer,
+    chamber,
+    pump,
     scene,
     camera,
     dotGeometry,
@@ -719,6 +730,12 @@ export function renderThreeFrame(
     // PRISM mode shows the single-white-light-to-spectrum fan
     floydBeams.visible = !!params.gpuPrism
 
+    threeScene.chamber.group.visible = !!params.chamber
+    threeScene.pump.group.visible = !!params.pump
+    prismMesh.visible = !params.chamber && !params.pump
+    if (params.chamber) updateChamber(threeScene.chamber, time, dt, params)
+    if (params.pump) updatePump(threeScene.pump, time, params)
+
     gpuMaterial.uniforms.uTime.value = time
     gpuMaterial.uniforms.uPR.value = renderer.getPixelRatio()
     gpuMaterial.uniforms.uSize.value = params.dr * 0.7
@@ -727,6 +744,7 @@ export function renderThreeFrame(
     gpuMaterial.uniforms.uWarp.value = params.gpuWarp
     gpuMaterial.uniforms.uHueShift.value = params.gpuHue
     gpuMaterial.uniforms.uSpin.value = params.gpuSpin
+    gpuMaterial.uniforms.uCounter.value = params.counter ? 1.0 : 0.0
     // No text-glyph projection in this build — keep the mesh spectral
     gpuMaterial.uniforms.uV0.value = 0
 
@@ -753,6 +771,12 @@ export function renderThreeFrame(
   threeScene.floydBeams.visible = false
   threeScene.dotPoints.visible = true
   threeScene.beamLines.visible = true
+
+  threeScene.chamber.group.visible = !!params.chamber
+  threeScene.pump.group.visible = !!params.pump
+  prismMesh.visible = !params.chamber && !params.pump
+  if (params.chamber) updateChamber(threeScene.chamber, time, dt, params)
+  if (params.pump) updatePump(threeScene.pump, time, params)
 
   let beamIndex = 0
 
@@ -813,13 +837,13 @@ export function renderThreeFrame(
   // Mark buffers for update
   dotGeometry.attributes.position.needsUpdate = true
   dotGeometry.attributes.color.needsUpdate = true
-  ;(dotGeometry.attributes.aInt as THREE.BufferAttribute).needsUpdate = true
-  ;(dotGeometry.attributes.aDepth as THREE.BufferAttribute).needsUpdate = true
+    ; (dotGeometry.attributes.aInt as THREE.BufferAttribute).needsUpdate = true
+    ; (dotGeometry.attributes.aDepth as THREE.BufferAttribute).needsUpdate = true
 
   beamGeometry.setDrawRange(0, beamIndex * 2)
   beamGeometry.attributes.position.needsUpdate = true
   beamGeometry.attributes.color.needsUpdate = true
-  ;(beamGeometry.attributes.aAlpha as THREE.BufferAttribute).needsUpdate = true
+    ; (beamGeometry.attributes.aAlpha as THREE.BufferAttribute).needsUpdate = true
 
   // Update uniforms
   dotMaterial.uniforms.uSize.value = params.dr
@@ -867,5 +891,359 @@ export function disposeThreeScene(threeScene: ThreeScene): void {
   threeScene.gpuMaterial.dispose()
   threeScene.gpuMaskTexture.dispose()
   threeScene.floydBeams.geometry.dispose()
-  ;(threeScene.floydBeams.material as THREE.Material).dispose()
+    ; (threeScene.floydBeams.material as THREE.Material).dispose()
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+// CHAMBER — counter-rotating star tetrahedron with tetractys sequencer
+// Two dual tetrahedra ride R(+ωt) and R(−ωt). Each face carries the ten
+// tetractys points; the 3-6-9-18-36-18-9-6 cycle steps them (apex→base
+// on the upright, base→apex on the inverted) with POV decay — the
+// stroboscopic wave. Vertex spheres anchor the cage. The central
+// octahedron is deliberately unrendered, and the prism core is
+// extinguished while the chamber runs: the center is not a light.
+// ═══════════════════════════════════════════════════════════════════
+
+export const CHAMBER_CYCLE = [3, 6, 9, 18, 36, 18, 9, 6]
+
+export interface ChamberRig {
+  group: THREE.Group
+  a: THREE.Group
+  b: THREE.Group
+  aSpheres: THREE.Mesh[]
+  bSpheres: THREE.Mesh[]
+  aGeom: THREE.BufferGeometry
+  bGeom: THREE.BufferGeometry
+  aColors: Float32Array
+  bColors: Float32Array
+  aBright: Float32Array
+  bBright: Float32Array
+  lastStep: number
+}
+
+function tetractysFace(a: number[], b: number[], c: number[]): number[] {
+  // Ten points in four rows, ordered apex → base
+  const pts: number[] = []
+  for (let i = 0; i <= 3; i++) {
+    for (let j = 0; j <= i; j++) {
+      const wa = (3 - i) / 3
+      const wb = (i - j) / 3
+      const wc = j / 3
+      pts.push(
+        a[0] * wa + b[0] * wb + c[0] * wc,
+        a[1] * wa + b[1] * wb + c[1] * wc,
+        a[2] * wa + b[2] * wb + c[2] * wc
+      )
+    }
+  }
+  return pts
+}
+
+function buildTetra(
+  verts: number[][],
+  edgeColor: number,
+  sphereColor: number
+): { g: THREE.Group; spheres: THREE.Mesh[]; geom: THREE.BufferGeometry; colors: Float32Array } {
+  const g = new THREE.Group()
+
+  // Edges (all 6 vertex pairs)
+  const edgePos: number[] = []
+  for (let i = 0; i < 4; i++)
+    for (let j = i + 1; j < 4; j++) edgePos.push(...verts[i], ...verts[j])
+  const eGeom = new THREE.BufferGeometry()
+  eGeom.setAttribute('position', new THREE.Float32BufferAttribute(edgePos, 3))
+  g.add(
+    new THREE.LineSegments(
+      eGeom,
+      new THREE.LineBasicMaterial({ color: edgeColor, transparent: true, opacity: 0.35 })
+    )
+  )
+
+  // Anchoring vertex spheres
+  const spheres: THREE.Mesh[] = []
+  const sGeom = new THREE.SphereGeometry(0.06, 12, 12)
+  const sMat = new THREE.MeshBasicMaterial({ color: sphereColor })
+  for (const v of verts) {
+    const m = new THREE.Mesh(sGeom, sMat)
+    m.position.set(v[0], v[1], v[2])
+    g.add(m)
+    spheres.push(m)
+  }
+
+  // Tetractys points: 4 faces × 10 points
+  const faces = [
+    [0, 1, 2],
+    [0, 1, 3],
+    [0, 2, 3],
+    [1, 2, 3],
+  ]
+  const pos: number[] = []
+  for (const [fa, fb, fc] of faces) pos.push(...tetractysFace(verts[fa], verts[fb], verts[fc]))
+  const geom = new THREE.BufferGeometry()
+  geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
+  const colors = new Float32Array(40 * 3)
+  geom.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+  g.add(
+    new THREE.Points(
+      geom,
+      new THREE.PointsMaterial({
+        size: 0.12,
+        vertexColors: true,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        sizeAttenuation: true,
+      })
+    )
+  )
+  return { g, spheres, geom, colors }
+}
+
+export function createChamberRig(): ChamberRig {
+  const R = 1.6
+  const s = R / Math.sqrt(3)
+  const vertsA = [
+    [s, s, s],
+    [s, -s, -s],
+    [-s, s, -s],
+    [-s, -s, s],
+  ]
+  const vertsB = vertsA.map((v) => [-v[0], -v[1], -v[2]])
+
+  const A = buildTetra(vertsA, 0xd85a30, 0xff8a50)
+  const B = buildTetra(vertsB, 0x378add, 0x6fb4ff)
+
+  const group = new THREE.Group()
+  group.add(A.g)
+  group.add(B.g)
+  group.visible = false
+
+  return {
+    group,
+    a: A.g,
+    b: B.g,
+    aSpheres: A.spheres,
+    bSpheres: B.spheres,
+    aGeom: A.geom,
+    bGeom: B.geom,
+    aColors: A.colors,
+    bColors: B.colors,
+    aBright: new Float32Array(40),
+    bBright: new Float32Array(40),
+    lastStep: -1,
+  }
+}
+
+export function updateChamber(
+  rig: ChamberRig,
+  time: number,
+  dt: number,
+  params: { ry: number }
+): void {
+  // Conjugate spin: the two hands share one axis, opposite signs
+  const w = 0.35 + 0.2 * (params.ry || 0)
+  rig.a.rotation.y = time * w
+  rig.b.rotation.y = -time * w
+  rig.a.rotation.x = 0.18 * Math.sin(time * 0.3)
+  rig.b.rotation.x = -0.18 * Math.sin(time * 0.3)
+
+  // Sequencer: 4 steps/s. Upright runs apex→base, inverted base→apex.
+  const step = Math.floor(time * 4)
+  if (step !== rig.lastStep) {
+    rig.lastStep = step
+    const amp = CHAMBER_CYCLE[((step % 8) + 8) % 8] / 36
+    const pA = ((step % 10) + 10) % 10
+    const pB = 9 - pA
+    for (let f = 0; f < 4; f++) {
+      const ia = f * 10 + pA
+      const ib = f * 10 + pB
+      rig.aBright[ia] = Math.min(1.4, rig.aBright[ia] + amp)
+      rig.bBright[ib] = Math.min(1.4, rig.bBright[ib] + amp)
+    }
+    const sc = 1 + 0.3 * amp
+    for (const m of rig.aSpheres) m.scale.setScalar(sc)
+    for (const m of rig.bSpheres) m.scale.setScalar(sc)
+  }
+
+  // POV decay — persistence of vision on the lattice
+  const k = Math.exp(-dt / 0.35)
+  for (let i = 0; i < 40; i++) {
+    rig.aBright[i] *= k
+    rig.bBright[i] *= k
+    const ga = 0.1 + rig.aBright[i] * 1.5
+    const gb = 0.1 + rig.bBright[i] * 1.5
+    rig.aColors[i * 3] = 0.95 * ga
+    rig.aColors[i * 3 + 1] = 0.45 * ga
+    rig.aColors[i * 3 + 2] = 0.22 * ga
+    rig.bColors[i * 3] = 0.25 * gb
+    rig.bColors[i * 3 + 1] = 0.55 * gb
+    rig.bColors[i * 3 + 2] = 1.0 * gb
+  }
+  ; (rig.aGeom.getAttribute('color') as THREE.BufferAttribute).needsUpdate = true
+    ; (rig.bGeom.getAttribute('color') as THREE.BufferAttribute).needsUpdate = true
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+// PUMP — Jerry's weave, with the fluid dynamics rendered as light.
+// Six strands of each hand on one cylinder, counter-rotating; particle
+// streams ride the strands — the warm family ascending, the cool family
+// descending — two opposed flows threading one cage. Hex flanges hold
+// still while the weave spins; funnel inlet above, three shaft rods on
+// the axis. Kinematic streamlines (light as the working fluid), not a
+// Navier–Stokes solve. The core stays extinguished while it runs.
+// ═══════════════════════════════════════════════════════════════════
+
+export interface PumpRig {
+  group: THREE.Group
+  a: THREE.Group
+  b: THREE.Group
+  aPts: THREE.BufferGeometry
+  bPts: THREE.BufferGeometry
+  aPos: Float32Array
+  bPos: Float32Array
+  aStrand: Uint8Array
+  bStrand: Uint8Array
+  aOff: Float32Array
+  bOff: Float32Array
+}
+
+const PUMP_R = 0.85
+const PUMP_Y0 = -0.65
+const PUMP_H = 1.3
+const PUMP_TURNS = 2.0
+const PUMP_STRANDS = 6
+const PUMP_PARTICLES = 12
+
+function pumpHelix(strand: number, dir: number, t: number): [number, number, number] {
+  const ang = strand * ((Math.PI * 2) / PUMP_STRANDS) + dir * t * PUMP_TURNS * Math.PI * 2
+  return [Math.cos(ang) * PUMP_R, PUMP_Y0 + PUMP_H * t, Math.sin(ang) * PUMP_R]
+}
+
+function buildStrandFamily(dir: number, lineColor: number, dotColor: number) {
+  const g = new THREE.Group()
+  const mat = new THREE.LineBasicMaterial({ color: lineColor, transparent: true, opacity: 0.5 })
+  for (let k = 0; k < PUMP_STRANDS; k++) {
+    const pts: number[] = []
+    for (let i = 0; i <= 48; i++) {
+      const [x, y, z] = pumpHelix(k, dir, i / 48)
+      pts.push(x, y, z)
+    }
+    const geom = new THREE.BufferGeometry()
+    geom.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3))
+    g.add(new THREE.Line(geom, mat))
+  }
+  const n = PUMP_STRANDS * PUMP_PARTICLES
+  const pos = new Float32Array(n * 3)
+  const strand = new Uint8Array(n)
+  const off = new Float32Array(n)
+  for (let i = 0; i < n; i++) {
+    strand[i] = i % PUMP_STRANDS
+    off[i] = (Math.floor(i / PUMP_STRANDS) + (i % PUMP_STRANDS) / PUMP_STRANDS) / PUMP_PARTICLES
+  }
+  const geom = new THREE.BufferGeometry()
+  geom.setAttribute('position', new THREE.BufferAttribute(pos, 3))
+  const dots = new THREE.Points(
+    geom,
+    new THREE.PointsMaterial({
+      color: dotColor,
+      size: 0.075,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      sizeAttenuation: true,
+    })
+  )
+  g.add(dots)
+  return { g, geom, pos, strand, off }
+}
+
+export function createPumpRig(): PumpRig {
+  const group = new THREE.Group()
+
+  const A = buildStrandFamily(1, 0xd85a30, 0xffa060)
+  const B = buildStrandFamily(-1, 0x378add, 0x7fc0ff)
+  group.add(A.g)
+  group.add(B.g)
+
+  // Static housing: hex flanges, funnel inlet, shaft rods
+  const hexMat = new THREE.LineBasicMaterial({ color: 0x8a8f98, transparent: true, opacity: 0.45 })
+  for (const fy of [PUMP_Y0 - 0.05, PUMP_Y0 + PUMP_H + 0.05]) {
+    const pts: THREE.Vector3[] = []
+    for (let i = 0; i <= 6; i++) {
+      const a = (i / 6) * Math.PI * 2
+      pts.push(new THREE.Vector3(Math.cos(a) * 0.95, fy, Math.sin(a) * 0.95))
+    }
+    group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), hexMat))
+  }
+  const funMat = new THREE.LineBasicMaterial({ color: 0x8a8f98, transparent: true, opacity: 0.35 })
+  const ringPts = (r: number, y: number) => {
+    const pts: THREE.Vector3[] = []
+    for (let i = 0; i <= 24; i++) {
+      const a = (i / 24) * Math.PI * 2
+      pts.push(new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r))
+    }
+    return pts
+  }
+  group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(ringPts(0.5, 1.12)), funMat))
+  group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(ringPts(0.2, 0.76)), funMat))
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2
+    const pts = [
+      new THREE.Vector3(Math.cos(a) * 0.5, 1.12, Math.sin(a) * 0.5),
+      new THREE.Vector3(Math.cos(a) * 0.2, 0.76, Math.sin(a) * 0.2),
+    ]
+    group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), funMat))
+  }
+  const rodMat = new THREE.LineBasicMaterial({ color: 0x8a8f98, transparent: true, opacity: 0.3 })
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2
+    const pts = [
+      new THREE.Vector3(Math.cos(a) * 0.07, PUMP_Y0 + 0.05, Math.sin(a) * 0.07),
+      new THREE.Vector3(Math.cos(a) * 0.07, 1.05, Math.sin(a) * 0.07),
+    ]
+    group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), rodMat))
+  }
+
+  group.visible = false
+  return {
+    group,
+    a: A.g,
+    b: B.g,
+    aPts: A.geom,
+    bPts: B.geom,
+    aPos: A.pos,
+    bPos: B.pos,
+    aStrand: A.strand,
+    bStrand: B.strand,
+    aOff: A.off,
+    bOff: B.off,
+  }
+}
+
+export function updatePump(rig: PumpRig, time: number, params: { ry: number }): void {
+  const w = 0.45 + 0.25 * (params.ry || 0)
+  rig.a.rotation.y = time * w
+  rig.b.rotation.y = -time * w
+
+  const flow = 0.2 + 0.08 * Math.abs(params.ry || 0)
+  const n = PUMP_STRANDS * PUMP_PARTICLES
+  for (let i = 0; i < n; i++) {
+    // Warm family ascends, cool family descends — the two opposed flows
+    let sa = (rig.aOff[i] + time * flow) % 1
+    if (sa < 0) sa += 1
+    let sb = (rig.bOff[i] - time * flow) % 1
+    if (sb < 0) sb += 1
+    const [ax, ay, az] = pumpHelix(rig.aStrand[i], 1, sa)
+    rig.aPos[i * 3] = ax
+    rig.aPos[i * 3 + 1] = ay
+    rig.aPos[i * 3 + 2] = az
+    const [bx, by, bz] = pumpHelix(rig.bStrand[i], -1, sb)
+    rig.bPos[i * 3] = bx
+    rig.bPos[i * 3 + 1] = by
+    rig.bPos[i * 3 + 2] = bz
+  }
+  ; (rig.aPts.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true
+    ; (rig.bPts.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true
 }
