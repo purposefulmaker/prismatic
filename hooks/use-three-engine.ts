@@ -17,7 +17,7 @@ import {
   updateGpuMask,
 } from '@/lib/prism-engine'
 import { applyLatentGeometry, lawsField, lawsColor } from '@/lib/prism-engine/laws'
-import { pumpFieldAt, computeChamberCtx, chamberFieldAt } from '@/lib/prism-engine/field-forms'
+import { pumpFieldAt, computeChamberCtx, chamberFieldAt } from '@/lib/prism-engine/field-form'
 import {
   createShapeMask,
   isNodeInShape,
