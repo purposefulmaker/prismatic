@@ -17,6 +17,7 @@ import {
   updateGpuMask,
 } from '@/lib/prism-engine'
 import { applyLatentGeometry, lawsField, lawsColor } from '@/lib/prism-engine/laws'
+import { pumpFieldAt, computeChamberCtx, chamberFieldAt } from '@/lib/prism-engine/field-forms'
 import {
   createShapeMask,
   isNodeInShape,
@@ -48,7 +49,6 @@ export function useThreeEngine(
   const threeSceneRef = useRef<ThreeScene | null>(null)
   const nodesRef = useRef<PrismNode[]>([])
   const volumetricNodesRef = useRef<PrismNode[]>([])
-  // new — the full EngineState shape
   const stateRef = useRef<EngineState>({
     ax: 0,
     ay: 0,
@@ -230,6 +230,8 @@ export function useThreeEngine(
       // Parity on the Fibonacci index interleaves the two populations evenly
       // over the sphere — two full fields, opposite hands, one lattice.
       const bidi = !!P.counter && !isStatic && !isVolumetric
+      // FIELD FORMS — chamber targets rotated once per frame, not per node
+      const chamberCtx = P.chamber ? computeChamberCtx(state.t, P) : null
       for (const node of activeNodes) {
         // Rodrigues rotation (sign-flipped for the counter-current)
         const dir = bidi && (node.idx & 1) === 1 ? -1 : 1
@@ -294,10 +296,14 @@ export function useThreeEngine(
           // Standard mode: beam pattern and shape mask
           const bp = calculateBeamPattern(node, P.pattern, state.t, P, nodeCount)
           const inShape = isNodeInShape(node, shapeMaskRef.current, P.shapeScale)
-          // THE LAWS — Consonance, Balance, Rhythmic Change, Radiation,
-          // the Vesica, and Frozen Music multiply the field
+          // FIELD FORMS — the pump and chamber as sources in this same field:
+          // the engine's own particles, colors, tau, breath, and rotation
+          let src = bp && inShape ? 1.0 : 0.0
+          if (P.pump) src = Math.max(src, pumpFieldAt(node.x, node.y, node.z, state.t, P))
+          if (chamberCtx) src = Math.max(src, chamberFieldAt(node.x, node.y, node.z, chamberCtx))
+          // THE LAWS multiply everything, forms included
           const lawL = lawsField(node.x, node.y, node.z, state.t, P)
-          const input = (bp && inShape ? 1.0 : 0.0) * lawL
+          const input = src * lawL
           node.intensity = applyPovPersistence(node.intensity, input, P.tau, dt)
           if (input > 0) beamCount++
         }
