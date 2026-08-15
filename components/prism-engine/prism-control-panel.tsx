@@ -13,38 +13,51 @@ import type {
 import { PRESETS, COLOR_PALETTES, COLOR_GRADIENTS } from '@/lib/prism-engine'
 
 // ─── Section Component ───
+// `note` prints a plain-language explanation of what the whole block affects.
 function Section({
   title,
+  note,
   children,
 }: {
   title: string
+  note?: string
   children: React.ReactNode
 }) {
   return (
     <div className="mb-3 pb-3 border-b border-white/5">
       <div className="text-[8px] tracking-[2px] text-white/35 mb-2 uppercase">{title}</div>
+      {note && (
+        <div className="text-[8px] text-white/30 mb-2 leading-relaxed">{note}</div>
+      )}
       {children}
     </div>
   )
 }
 
 // ─── Control Row ───
+// `disabled` greys the row and blocks interaction when the control has no
+// effect in the current state; `hint` explains a dependency in one short line.
 function ControlRow({
   label,
   value,
+  disabled,
+  hint,
   children,
 }: {
   label: string
   value: string | number
+  disabled?: boolean
+  hint?: string
   children: React.ReactNode
 }) {
   return (
-    <div className="mb-1.5">
+    <div className={cn('mb-1.5', disabled && 'opacity-35')}>
       <div className="flex justify-between items-center">
         <label className="text-[9px] text-white/50">{label}</label>
         <span className="text-[9px] text-white font-bold min-w-[36px] text-right">{value}</span>
       </div>
-      {children}
+      <div className={cn(disabled && 'pointer-events-none')}>{children}</div>
+      {hint && <div className="text-[7px] text-white/25 mt-0.5 leading-tight">{hint}</div>}
     </div>
   )
 }
@@ -55,12 +68,14 @@ function PrismSlider({
   min,
   max,
   step = 1,
+  disabled,
   onChange,
 }: {
   value: number
   min: number
   max: number
   step?: number
+  disabled?: boolean
   onChange: (value: number) => void
 }) {
   return (
@@ -70,10 +85,12 @@ function PrismSlider({
       max={max}
       step={step}
       value={value}
+      disabled={disabled}
       onChange={e => onChange(Number(e.target.value))}
       className="w-full h-0.5 bg-white/10 rounded-sm appearance-none outline-none mt-1 cursor-pointer
         [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5
-        [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer"
+        [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
+        disabled:cursor-not-allowed"
     />
   )
 }
@@ -241,7 +258,10 @@ function ColorSection({
   }
 
   return (
-    <Section title="◐ COLOR">
+    <Section
+      title="◐ COLOR"
+      note="How the dots are colored. Spectrum uses real wavelength physics (and enables the prism's Refraction/Dispersion)."
+    >
       {/* Mode selector */}
       <ButtonGroup>
         {modes.slice(0, 2).map(m => (
@@ -520,7 +540,14 @@ export function PrismControlPanel({
         )}
 
         {/* THE FIELD — GPU tier */}
-        <Section title="⌁ THE FIELD · GPU">
+        <Section
+          title="⌁ THE FIELD · GPU"
+          note={
+            params.gpuMode
+              ? 'GPU tier is ON: all math runs on 30k nodes in the shader. The CPU controls (color, lattice, beams, laws) are hidden because they do not apply here.'
+              : 'Turn on for the 30k-node GPU field. Doing so replaces the CPU dot engine and its controls below.'
+          }
+        >
           <div className="flex items-center justify-between mb-2">
             <label className="text-[9px] text-white/50">GPU Mode (30k nodes)</label>
             <button
@@ -637,7 +664,10 @@ export function PrismControlPanel({
             <ColorSection color={params.color} onColorChange={onColorChange} />
 
             {/* Lattice Mode */}
-            <Section title="◆ LATTICE MODE">
+            <Section
+              title="◆ LATTICE MODE"
+              note="Rebuilds the single sphere into layered geometric shells. Edge controls appear once enabled."
+            >
               <div className="flex items-center justify-between mb-2">
                 <label className="text-[9px] text-white/50">Enable Lattice</label>
                 <button
@@ -726,29 +756,45 @@ export function PrismControlPanel({
             </Section>
 
             {/* Prism */}
-            <Section title="◈ CENTRAL PRISM">
-              {params.color.mode !== 'spectrum' && (
-                <div className="text-[8px] text-white/35 mb-1.5 leading-relaxed">
-                  Refraction & Dispersion shape the SPECTRUM coloring — switch Color
-                  mode to Spectrum to see them bend the light.
-                </div>
-              )}
-              <ControlRow label="Refraction Index" value={params.refIdx.toFixed(2)}>
-                <PrismSlider
-                  value={params.refIdx * 100}
-                  min={100}
-                  max={250}
-                  onChange={v => onParamChange('refIdx', v / 100)}
-                />
-              </ControlRow>
-              <ControlRow label="Dispersion" value={params.dispersion.toFixed(2)}>
-                <PrismSlider
-                  value={params.dispersion * 100}
-                  min={1}
-                  max={20}
-                  onChange={v => onParamChange('dispersion', v / 100)}
-                />
-              </ControlRow>
+            <Section
+              title="◈ CENTRAL PRISM"
+              note="The glowing core + rainbow ring at the center of the sphere."
+            >
+              {(() => {
+                const spectrumOnly = params.color.mode !== 'spectrum'
+                return (
+                  <>
+                    <ControlRow
+                      label="Refraction Index"
+                      value={params.refIdx.toFixed(2)}
+                      disabled={spectrumOnly}
+                      hint={spectrumOnly ? 'Spectrum color mode only' : 'Bends the wavelength→color mapping'}
+                    >
+                      <PrismSlider
+                        value={params.refIdx * 100}
+                        min={100}
+                        max={250}
+                        disabled={spectrumOnly}
+                        onChange={v => onParamChange('refIdx', v / 100)}
+                      />
+                    </ControlRow>
+                    <ControlRow
+                      label="Dispersion"
+                      value={params.dispersion.toFixed(2)}
+                      disabled={spectrumOnly}
+                      hint={spectrumOnly ? 'Spectrum color mode only' : 'Spread of the spectral fan'}
+                    >
+                      <PrismSlider
+                        value={params.dispersion * 100}
+                        min={1}
+                        max={20}
+                        disabled={spectrumOnly}
+                        onChange={v => onParamChange('dispersion', v / 100)}
+                      />
+                    </ControlRow>
+                  </>
+                )
+              })()}
               <ControlRow label="Prism Intensity" value={params.prismInt.toFixed(1)}>
                 <PrismSlider
                   value={params.prismInt * 10}
@@ -1044,8 +1090,15 @@ export function PrismControlPanel({
 
 
             {/* Beams */}
-            <Section title="⚡ BEAM PHYSICS">
-              <ControlRow label="Beam Count" value={params.bc}>
+            <Section
+              title="⚡ BEAM PHYSICS"
+              note="Threads drawn from the prism out to each lit dot. WHICH dots light up is set by the DFT Pattern below."
+            >
+              <ControlRow
+                label="Beam Density"
+                value={params.bc}
+                hint="Pattern threshold — how many dots ignite"
+              >
                 <PrismSlider
                   value={params.bc}
                   min={0}
@@ -1054,7 +1107,11 @@ export function PrismControlPanel({
                   onChange={v => onParamChange('bc', v)}
                 />
               </ControlRow>
-              <ControlRow label="Beam Width" value={params.bw.toFixed(1)}>
+              <ControlRow
+                label="Beam Glow"
+                value={params.bw.toFixed(1)}
+                hint="Thread brightness (WebGL can't vary true line width)"
+              >
                 <PrismSlider
                   value={params.bw * 10}
                   min={1}
@@ -1062,7 +1119,7 @@ export function PrismControlPanel({
                   onChange={v => onParamChange('bw', v / 10)}
                 />
               </ControlRow>
-              <ControlRow label="Beam Opacity" value={params.bo.toFixed(2)}>
+              <ControlRow label="Beam Opacity" value={params.bo.toFixed(2)} hint="Overall thread opacity">
                 <PrismSlider
                   value={params.bo * 100}
                   min={5}
@@ -1073,7 +1130,10 @@ export function PrismControlPanel({
             </Section>
 
             {/* DFT Pattern */}
-            <Section title="∿ DFT BEAM PATTERN">
+            <Section
+              title="∿ DFT BEAM PATTERN"
+              note="Chooses WHICH dots ignite via an interference pattern. The lit dots and their beams follow this."
+            >
               <ButtonGroup>
                 {patterns.slice(0, 3).map(p => (
                   <PatternButton
@@ -1113,7 +1173,10 @@ export function PrismControlPanel({
             </Section>
 
             {/* Dots */}
-            <Section title="● NODE PHYSICS">
+            <Section
+              title="● NODE PHYSICS"
+              note="Styles the dots themselves — size, glow, breathing. Independent of the beams."
+            >
               <ControlRow label="Dot Radius" value={params.dr.toFixed(1)}>
                 <PrismSlider
                   value={params.dr * 10}
