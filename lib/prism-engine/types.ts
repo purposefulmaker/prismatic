@@ -72,7 +72,7 @@ export interface PrismParameters {
   // CHAMBER: counter-rotating star tetrahedron; tetractys points on every
   // face stepped by the 3-6-9-18-36-18-9-6 cycle; octahedral core left void.
   chamber: boolean
-  // PUMP: Jerry's weave — 6+6 counter-rotating strands, flow as light
+  // PUMP: Vortex weave — 6+6 counter-rotating strands, flow as light
   pump: boolean
   // THE LAWS of The Beautiful Necessity — see lib/prism-engine/laws.ts
   lawPolarity: number
