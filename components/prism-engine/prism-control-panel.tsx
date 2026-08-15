@@ -486,7 +486,7 @@ export function PrismControlPanel({
           THE FIELD PERCEPTIONIST
         </div>
 
-        {/* POV Shape — CPU (DISCO) mode only; GPU field has no glyph projection */}
+        {/* POV Shape — CPU (FractalDot) mode only; GPU field has no glyph projection */}
         {!params.gpuMode && (
           <Section title="◇ POV SHAPE FORMATION">
             <input
@@ -629,7 +629,7 @@ export function PrismControlPanel({
           )}
         </Section>
 
-        {/* CPU (DISCO) mode controls — these drive the CPU node loop, which is
+        {/* CPU (FractalDot) mode controls — these drive the CPU node loop, which is
             bypassed in GPU mode, so they are hidden while THE FIELD/PRISM run */}
         {!params.gpuMode && (
           <>

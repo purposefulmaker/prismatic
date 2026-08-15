@@ -10,21 +10,21 @@ Splits the field into two interleaved populations, one riding `R(+ωt)`, the oth
 
 - `lib/prism-engine/types.ts` — `counter: boolean` added to `PrismParameters`.
 - `lib/prism-engine/constants.ts` — defaults `counter: false`.
-- `hooks/use-three-engine.ts` — DISCO/CPU path: odd Fibonacci indices get the sign-flipped Rodrigues rotation (`arx·dir, ary·dir, arz·dir`, `dir = −1` for odd `idx`). Index parity on the golden-angle lattice interleaves the two populations evenly over the sphere. Disabled while static or volumetric (the lattice-shell + text-wrap path keeps its single frame for now — counter-rotating shells are a clean follow-up).
+- `hooks/use-three-engine.ts` — FractalDot/CPU path: odd Fibonacci indices get the sign-flipped Rodrigues rotation (`arx·dir, ary·dir, arz·dir`, `dir = −1` for odd `idx`). Index parity on the golden-angle lattice interleaves the two populations evenly over the sphere. Disabled while static or volumetric (the lattice-shell + text-wrap path keeps its single frame for now — counter-rotating shells are a clean follow-up).
 - `lib/prism-engine/three-renderer.ts` — THE FIELD/GPU path: new `uCounter` uniform; the vertex shader flips spin sign for half the 30,000 nodes by seed (`aSeed < 0.5 → sdir = −1`). Synced per-frame from `params.counter`.
-- `components/prism-engine/prism-control-panel.tsx` — `Bidirectional (conjugate pair)` toggle in both the ⟳ Rodrigues Rotation section (disco) and ⌁ The Field · GPU section, in the house ON/OFF button idiom.
+- `components/prism-engine/prism-control-panel.tsx` — `Bidirectional (conjugate pair)` toggle in both the ⟳ Rodrigues Rotation section (FractalDot) and ⌁ The Field · GPU section, in the house ON/OFF button idiom.
 - `README.md` — documented under Controls.
 
 ## The demo that matters
 
-DISCO mode → pattern `HELIX` (`F_even + F_odd = 0`) → Bidirectional ON → raise ωy. The helix pattern already runs two strands π apart; now the substrate itself runs two ways. Two opposed currents, one body, and the pattern is what they agree on.
+FractalDot mode → pattern `HELIX` (`F_even + F_odd = 0`) → Bidirectional ON → raise ωy. The helix pattern already runs two strands π apart; now the substrate itself runs two ways. Two opposed currents, one body, and the pattern is what they agree on.
 
 All touched files pass esbuild syntax checks. No dependencies added, no behavior changed while the toggle is off.
 
 
 # CHAMBER — the architecture, rendered
 
-New parameter `chamber: boolean` (default off), toggle labeled `Chamber (369 tetractys)` in the ⟳ Rodrigues Rotation section. Works in both DISCO and THE FIELD.
+New parameter `chamber: boolean` (default off), toggle labeled `Chamber (369 tetractys)` in the ⟳ Rodrigues Rotation section. Works in both FractalDot and THE FIELD.
 
 What it draws, and what each piece is:
 
@@ -33,14 +33,14 @@ What it draws, and what each piece is:
 - **Anchoring spheres** at all eight vertices, pulsing with the live cycle value.
 - **The void**: the central octahedron is deliberately unrendered, and while the chamber runs the prism core is extinguished (`prismMesh.visible = false`). The center is not a light; the light is the projection of the whole.
 
-Full stack demo: DISCO → Helix → Bidirectional ON → **Chamber ON** → raise ωy. Substrate counter-rotates, cage counter-rotates, chant steps the faces, core stays dark.
+Full stack demo: FractalDot → Helix → Bidirectional ON → **Chamber ON** → raise ωy. Substrate counter-rotates, cage counter-rotates, chant steps the faces, core stays dark.
 
 Files: `three-renderer.ts` (ChamberRig + createChamberRig/updateChamber + wiring in both render branches), `types.ts`, `constants.ts`, `prism-control-panel.tsx`. All pass esbuild.
 
 
 # THE LAWS — every law of The Beautiful Necessity as a field operator
 
-New module `lib/prism-engine/laws.ts` + a full sidebar section (⚖ THE LAWS · BEAUTIFUL NECESSITY, in the disco panel below Rodrigues Rotation). Thirteen flat params, all default off. The intensity laws multiply the beam field — set Pattern to ALL to see any law pure. The color laws ride every mode; Latent Geometry moves the nodes themselves.
+New module `lib/prism-engine/laws.ts` + a full sidebar section (⚖ THE LAWS · BEAUTIFUL NECESSITY, in the FractalDot panel below Rodrigues Rotation). Thirteen flat params, all default off. The intensity laws multiply the beam field — set Pattern to ALL to see any law pure. The color laws ride every mode; Latent Geometry moves the nodes themselves.
 
 | Law | Plate | Operator |
 |---|---|---|
@@ -55,7 +55,7 @@ New module `lib/prism-engine/laws.ts` + a full sidebar section (⚖ THE LAWS · 
 | Latent Geometry | hexagram in nature, the plans | the node cloud condenses onto N great meridians — 3, 4, 5, 6 |
 | Frozen Music | Architecture as Harmony | two azimuthal waves at an exact interval — 1:2, 2:3, 3:4, 4:5, 4:7 — the window ratios as interference |
 
-Wiring: `types.ts` (13 params), `constants.ts` (defaults), `use-three-engine.ts` (latent snap after rotation; color laws after resolveNodeColor; lawsField multiplying the pattern input), `prism-control-panel.tsx` (8 sliders + latent buttons + interval buttons). CPU/disco path; all files pass esbuild.
+Wiring: `types.ts` (13 params), `constants.ts` (defaults), `use-three-engine.ts` (latent snap after rotation; color laws after resolveNodeColor; lawsField multiplying the pattern input), `prism-control-panel.tsx` (8 sliders + latent buttons + interval buttons). CPU/FractalDot path; all files pass esbuild.
 
 
 # PUMP — fluid dynamics as light

@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// MATH DISCO ENGINE — Module Exports
+// MATH FractalDot ENGINE — Module Exports
 // Prismatic POV · Lattice Mode
 // ═══════════════════════════════════════════════════════════════
 
@@ -31,14 +31,14 @@ export { createShapeMask, isNodeInShape } from './shape-mask'
 export { resolveNodeColor, hexToRGB, rgbToHex } from './color'
 
 // Lattice / Volumetric Shells
-export { 
-  createVolumetricShells, 
-  rotateVolumetricNodes, 
+export {
+  createVolumetricShells,
+  rotateVolumetricNodes,
   applyLightProjection,
   evaluateShapeSDF,
-  isInLatticeShape, 
-  buildLatticeEdges, 
-  updateEdgeIntensities 
+  isInLatticeShape,
+  buildLatticeEdges,
+  updateEdgeIntensities
 } from './lattice'
 
 // Three.js WebGL Renderer

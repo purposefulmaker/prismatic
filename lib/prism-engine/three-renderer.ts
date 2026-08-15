@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// MATH DISCO ENGINE — Three.js WebGL Renderer
+// MATH FractalDot ENGINE — Three.js WebGL Renderer
 // Glowing dots · Beam threads · Prism core · Starfield
 // ═══════════════════════════════════════════════════════════════
 
