@@ -84,6 +84,11 @@ export function useThreeEngine(
   })
   const [isRunning, setIsRunning] = useState(false)
   const [panelHidden, setPanelHidden] = useState(false)
+  // Mirror panelHidden into a ref so long-lived event handlers (resize, wheel)
+  // can read the current value WITHOUT the init/interaction effects depending
+  // on it — otherwise every panel toggle would tear down and rebuild the whole
+  // WebGL scene and re-register all listeners.
+  const panelHiddenRef = useRef(false)
 
   // Update params ref when props change
   useEffect(() => {
@@ -105,8 +110,11 @@ export function useThreeEngine(
     }
   }, [params])
 
-  // Handle viewport updates when panel visibility changes
+  // Handle viewport updates when panel visibility changes. This is the ONLY
+  // effect that reacts to panelHidden — it just nudges the camera/viewport,
+  // never rebuilds the scene.
   useEffect(() => {
+    panelHiddenRef.current = panelHidden
     if (threeSceneRef.current) {
       updateViewport(
         threeSceneRef.current,
@@ -144,14 +152,15 @@ export function useThreeEngine(
     // Set initial viewport
     updateViewport(threeSceneRef.current, window.innerWidth, window.innerHeight, false)
 
-    // Resize handler
+    // Resize handler — reads panel state from the ref (not a closure) so this
+    // listener never needs re-registering when the panel toggles.
     const handleResize = () => {
       if (threeSceneRef.current) {
         updateViewport(
           threeSceneRef.current,
           window.innerWidth,
           window.innerHeight,
-          panelHidden
+          panelHiddenRef.current
         )
       }
     }
@@ -345,7 +354,9 @@ export function useThreeEngine(
       }
       setIsRunning(false)
     }
-  }, [nodeCount, panelHidden])
+    // Scene is built ONCE per nodeCount. Panel visibility is handled by the
+    // separate viewport effect above, so it is intentionally NOT a dependency.
+  }, [nodeCount])
 
   // Mouse/touch interaction handlers
   useEffect(() => {
@@ -399,7 +410,7 @@ export function useThreeEngine(
           threeSceneRef.current,
           window.innerWidth,
           window.innerHeight,
-          panelHidden
+          panelHiddenRef.current
         )
       }
     }
@@ -421,7 +432,9 @@ export function useThreeEngine(
       canvas.removeEventListener('touchend', handleTouchEnd)
       canvas.removeEventListener('wheel', handleWheel)
     }
-  }, [panelHidden])
+    // Listeners are registered once; panel state is read via ref inside the
+    // handlers, so this effect never needs to re-run on toggle.
+  }, [])
 
   return {
     canvasRef,
