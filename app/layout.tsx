@@ -10,23 +10,8 @@ export const metadata: Metadata = {
   title: 'The Field Perceptionist presents — The Beautiful Necessity',
   description:
     'The Beautiful Necessity: a living field rendered as physics — a Fibonacci lattice on the golden angle, Cauchy dispersion, Rodrigues rotation, and POV persistence. Seeing the field. Feeling the field. Being the field.',
-  icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
-  },
+  // Icons are provided by the file-based convention: app/icon.png (the mandala)
+  // and app/apple-icon.png. No explicit `icons` block so nothing overrides them.
 }
 
 export default function RootLayout({

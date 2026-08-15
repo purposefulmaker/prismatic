@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// MATH DISCO ENGINE — Canvas Renderer
+// MATH FractalDot ENGINE — Canvas Renderer
 // ═══════════════════════════════════════════════════════════════
 
 import type { PrismNode, PrismParameters, EngineState, LatticeEdge } from './types'
@@ -141,43 +141,43 @@ export function drawVolumetricNode(
   const px = centerX + node.x * radius
   const py = centerY + node.y * radius
   const depth = (node.z + 1) / 2
-  
+
   // Back-face culling with shell depth consideration
   if (depth < 0.15 && nodeRadius > 0.5) return
-  
+
   const intensity = Math.max(node.intensity, 0.1)
-  
+
   // Size scales with shell radius (inner shells have smaller dots)
   const shellScale = 0.4 + nodeRadius * 0.6
   const size = params.dr * shellScale * (0.5 + depth * 0.5) * (0.6 + intensity * 0.4)
   const alpha = intensity * (0.3 + depth * 0.7) * (0.5 + nodeRadius * 0.5)
-  
+
   if (alpha < 0.03) return
-  
+
   // Outer glow for brighter nodes
   if (params.gr > 0 && intensity > 0.3) {
     const glowSize = size * 2 + params.gr * intensity * 0.4
     const glowGradient = ctx.createRadialGradient(px, py, 0, px, py, glowSize)
     glowGradient.addColorStop(0, `rgba(${(node.r * 255) | 0},${(node.g * 255) | 0},${(node.b * 255) | 0},${alpha * 0.3})`)
     glowGradient.addColorStop(1, `rgba(${(node.r * 255) | 0},${(node.g * 255) | 0},${(node.b * 255) | 0},0)`)
-    
+
     ctx.fillStyle = glowGradient
     ctx.beginPath()
     ctx.arc(px, py, glowSize, 0, Math.PI * 2)
     ctx.fill()
   }
-  
+
   // Main dot - blend between spectral color and white based on light
   const whiteAmount = intensity * 0.4
   const r = Math.min(255, (node.r * 255 * (1 - whiteAmount) + 255 * whiteAmount) | 0)
   const g = Math.min(255, (node.g * 255 * (1 - whiteAmount) + 255 * whiteAmount) | 0)
   const b = Math.min(255, (node.b * 255 * (1 - whiteAmount) + 255 * whiteAmount) | 0)
-  
+
   ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`
   ctx.beginPath()
   ctx.arc(px, py, size, 0, Math.PI * 2)
   ctx.fill()
-  
+
   // Bright white center for high-intensity nodes
   if (intensity > 0.6) {
     ctx.fillStyle = `rgba(255,255,255,${alpha * 0.6})`
@@ -202,7 +202,7 @@ export function drawBackLight(
   gradient.addColorStop(0.3, `rgba(200,220,255,${0.08 * intensity})`)
   gradient.addColorStop(0.6, `rgba(150,180,220,${0.03 * intensity})`)
   gradient.addColorStop(1, 'rgba(100,130,180,0)')
-  
+
   ctx.fillStyle = gradient
   ctx.beginPath()
   ctx.arc(centerX, centerY, 200, 0, Math.PI * 2)
@@ -223,36 +223,36 @@ export function drawLatticeEdge(
 ): void {
   const nodeA = nodes[edge.a]
   const nodeB = nodes[edge.b]
-  
+
   if (!nodeA || !nodeB) return
-  
+
   // Only draw edges in front hemisphere
   const avgZ = (nodeA.z + nodeB.z) / 2
   if (avgZ < -0.3) return
-  
+
   const depth = (avgZ + 1) / 2
   const intensity = Math.max(nodeA.intensity, nodeB.intensity, 0.15) // Minimum visibility
   const alpha = intensity * params.lattice.edgeOpacity * depth
-  
+
   if (alpha < 0.02) return
-  
+
   const ax = centerX + nodeA.x * radius
   const ay = centerY + nodeA.y * radius
   const bx = centerX + nodeB.x * radius
   const by = centerY + nodeB.y * radius
-  
+
   // Get color from edge wavelength
   const [r, g, b] = wavelengthToRGB(edge.wavelength)
-  
+
   // Create gradient along edge
   const gradient = ctx.createLinearGradient(ax, ay, bx, by)
   const [ar, ag, ab] = [nodeA.r, nodeA.g, nodeA.b]
   const [br, bg, bb] = [nodeB.r, nodeB.g, nodeB.b]
-  
+
   gradient.addColorStop(0, `rgba(${(ar * 255) | 0},${(ag * 255) | 0},${(ab * 255) | 0},${alpha})`)
   gradient.addColorStop(0.5, `rgba(${(r * 255) | 0},${(g * 255) | 0},${(b * 255) | 0},${alpha * 1.2})`)
   gradient.addColorStop(1, `rgba(${(br * 255) | 0},${(bg * 255) | 0},${(bb * 255) | 0},${alpha})`)
-  
+
   ctx.beginPath()
   ctx.moveTo(ax, ay)
   ctx.lineTo(bx, by)
@@ -260,7 +260,7 @@ export function drawLatticeEdge(
   ctx.lineWidth = params.lattice.edgeWidth * (0.5 + depth * 0.5) * (0.5 + intensity * 0.5)
   ctx.lineCap = 'round'
   ctx.stroke()
-  
+
   // Inner glow on bright edges
   if (params.lattice.innerGlow > 0 && intensity > 0.5) {
     const glowAlpha = alpha * params.lattice.innerGlow * 0.3
@@ -287,32 +287,32 @@ export function drawLatticeVertex(
   const px = centerX + node.x * radius
   const py = centerY + node.y * radius
   const depth = (node.z + 1) / 2
-  
+
   if (depth < 0.2) return
-  
+
   const intensity = Math.max(node.intensity, 0.2) // Vertices always somewhat visible
   const size = params.dr * (0.6 + depth * 0.4) * (0.7 + intensity * 0.3)
   const alpha = intensity * (0.4 + depth * 0.6)
-  
+
   // Outer glow
   if (params.gr > 0) {
     const glowSize = size + params.gr * intensity * 0.5
     const glowGradient = ctx.createRadialGradient(px, py, 0, px, py, glowSize)
     glowGradient.addColorStop(0, `rgba(${(node.r * 255) | 0},${(node.g * 255) | 0},${(node.b * 255) | 0},${alpha * 0.5})`)
     glowGradient.addColorStop(1, `rgba(${(node.r * 255) | 0},${(node.g * 255) | 0},${(node.b * 255) | 0},0)`)
-    
+
     ctx.fillStyle = glowGradient
     ctx.beginPath()
     ctx.arc(px, py, glowSize, 0, Math.PI * 2)
     ctx.fill()
   }
-  
+
   // Core vertex
   ctx.fillStyle = `rgba(${Math.min(255, (node.r * 255 + 60) | 0)},${Math.min(255, (node.g * 255 + 60) | 0)},${Math.min(255, (node.b * 255 + 60) | 0)},${alpha})`
   ctx.beginPath()
   ctx.arc(px, py, size, 0, Math.PI * 2)
   ctx.fill()
-  
+
   // Bright center dot
   if (intensity > 0.6) {
     ctx.fillStyle = `rgba(255,255,255,${alpha * 0.7})`
@@ -348,10 +348,10 @@ export function renderFrame(
   if (params.lattice?.enabled) {
     // Draw back light first (behind everything)
     drawBackLight(ctx, centerX, centerY, params.lattice.innerGlow)
-    
+
     // Draw dimmer central prism
     drawCentralPrism(ctx, centerX, centerY, prismIntensity)
-    
+
     // Draw all volumetric nodes sorted by depth
     for (const node of sorted) {
       drawVolumetricNode(ctx, node, centerX, centerY, radius, params)
@@ -359,7 +359,7 @@ export function renderFrame(
   } else {
     // STANDARD MODE: Draw beams and nodes
     drawCentralPrism(ctx, centerX, centerY, prismIntensity)
-    
+
     // Draw beams from center to nodes
     for (const node of sorted) {
       drawBeam(ctx, node, centerX, centerY, radius, params)

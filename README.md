@@ -26,7 +26,7 @@ The Beautiful Necessity is an interactive visual instrument. Points of light are
 |------|----------|--------------|
 | **THE FIELD** | GPU (WebGL shader) | 30,000 nodes with all warp, rotation, color, and interference math computed per-node in the vertex shader — zero CPU node loop. |
 | **PRISM** | GPU (WebGL shader) | Pink Floyd mode: a single white beam enters the prism and fans out into the spectrum across the mesh. Pure dispersion. |
-| **DISCO** | CPU (Three.js points) | The classic path — ~1,600 nodes with full control over color modes, volumetric lattice shells, beam physics, and DFT patterns. |
+| **FractalDot** | CPU (Three.js points) | The classic path — ~1,600 nodes with full control over color modes, volumetric lattice shells, beam physics, and DFT patterns. |
 
 The control panel is **mode-aware**: it only shows the sliders that actually drive the active renderer, so every visible control produces a visible change.
 
@@ -39,6 +39,8 @@ The control panel is **mode-aware**: it only shows the sliders that actually dri
 **Lattice Mode** — Shape (Sphere / Pyramid / Cube / Diamond / Star), Base Polygon (Tri / Quad / Hex), Shells, Edge Width, Edge Opacity, Inner Glow. Builds concentric volumetric shells connected by lit edges.
 
 **Beam Physics / DFT** — Beam Count, Width, Opacity, and pattern selection (DFT, Gabor, Helix, Sinc, Fibonacci, All).
+
+**Bidirectional (conjugate pair)** — splits the field into two interleaved populations riding `R(+ωt)` and `R(−ωt)`. In FractalDot it flips half the Fibonacci lattice's Rodrigues rotation by index parity; in THE FIELD it flips half the 30,000 GPU nodes by seed. Run it with the Helix pattern (`F_even + F_odd = 0`) and the render becomes the standing agreement of two opposed currents — form held while both flows pour through it.
 
 ## Project structure
 

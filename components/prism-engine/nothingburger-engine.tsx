@@ -32,7 +32,7 @@ export interface NothingburgerEngineProps {
 }
 
 /**
- * Math Disco Engine — Prismatic POV with Three.js WebGL
+ * Math FractalDot Engine — Prismatic POV with Three.js WebGL
  *
  * A modular, importable component that renders the full engine with:
  * - 1000-node Fibonacci sphere
@@ -85,15 +85,19 @@ export function NothingburgerEngine({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Sync panel state
-  const handlePanelToggle = () => {
-    setPanelOpen(v => !v)
+  // Single source of truth: panelOpen. Keep the engine's panelHidden flag
+  // (which drives the render centering offset) always mirroring it — on mount
+  // AND on every change — so the shape can never be offset for a panel state
+  // that isn't actually on screen.
+  useEffect(() => {
     setPanelHidden(!panelOpen)
-  }
+  }, [panelOpen, setPanelHidden])
+
+  const handlePanelToggle = () => setPanelOpen(v => !v)
 
   const inField = !!params.gpuMode && !params.gpuPrism
   const inPrism = !!params.gpuMode && !!params.gpuPrism
-  const inDisco = !params.gpuMode
+  const inFractalDot = !params.gpuMode
 
   return (
     <div className={className}>
@@ -145,12 +149,12 @@ export function NothingburgerEngine({
                 onClick={() => applyPreset('genesis')}
                 className={
                   'font-mono text-[9px] md:text-[10px] tracking-[0.15em] md:tracking-[0.2em] px-3 md:px-4 py-1.5 rounded-full border transition-colors ' +
-                  (inDisco
+                  (inFractalDot
                     ? 'border-white/80 bg-white text-black'
                     : 'border-white/20 bg-transparent text-white/60 hover:border-white/50 hover:text-white')
                 }
               >
-                DISCO
+                FractalDot
               </button>
             </div>
             {inField && (

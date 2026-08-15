@@ -486,7 +486,7 @@ export function PrismControlPanel({
           THE FIELD PERCEPTIONIST
         </div>
 
-        {/* POV Shape — CPU (DISCO) mode only; GPU field has no glyph projection */}
+        {/* POV Shape — CPU (FractalDot) mode only; GPU field has no glyph projection */}
         {!params.gpuMode && (
           <Section title="◇ POV SHAPE FORMATION">
             <input
@@ -552,6 +552,20 @@ export function PrismControlPanel({
                   {params.gpuPrism ? 'ON' : 'OFF'}
                 </button>
               </div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-[9px] text-white/50">Bidirectional (conjugate pair)</label>
+                <button
+                  onClick={() => onParamChange('counter', !params.counter)}
+                  className={cn(
+                    'px-3 py-1 text-[8px] tracking-[1px] rounded-sm border transition-all',
+                    params.counter
+                      ? 'bg-white/20 border-white/40 text-white'
+                      : 'bg-white/4 border-white/10 text-white/40'
+                  )}
+                >
+                  {params.counter ? 'ON' : 'OFF'}
+                </button>
+              </div>
               <ControlRow label="Reality Warp" value={params.gpuWarp.toFixed(2)}>
                 <PrismSlider
                   value={params.gpuWarp * 100}
@@ -615,260 +629,516 @@ export function PrismControlPanel({
           )}
         </Section>
 
-        {/* CPU (DISCO) mode controls — these drive the CPU node loop, which is
+        {/* CPU (FractalDot) mode controls — these drive the CPU node loop, which is
             bypassed in GPU mode, so they are hidden while THE FIELD/PRISM run */}
         {!params.gpuMode && (
           <>
-        {/* Color Mode */}
-        <ColorSection color={params.color} onColorChange={onColorChange} />
+            {/* Color Mode */}
+            <ColorSection color={params.color} onColorChange={onColorChange} />
 
-        {/* Lattice Mode */}
-        <Section title="◆ LATTICE MODE">
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-[9px] text-white/50">Enable Lattice</label>
-            <button
-              onClick={() => onLatticeChange('enabled', !params.lattice.enabled)}
-              className={cn(
-                'px-3 py-1 text-[8px] tracking-[1px] rounded-sm border transition-all',
-                params.lattice.enabled
-                  ? 'bg-white/20 border-white/40 text-white'
-                  : 'bg-white/4 border-white/10 text-white/40'
+            {/* Lattice Mode */}
+            <Section title="◆ LATTICE MODE">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-[9px] text-white/50">Enable Lattice</label>
+                <button
+                  onClick={() => onLatticeChange('enabled', !params.lattice.enabled)}
+                  className={cn(
+                    'px-3 py-1 text-[8px] tracking-[1px] rounded-sm border transition-all',
+                    params.lattice.enabled
+                      ? 'bg-white/20 border-white/40 text-white'
+                      : 'bg-white/4 border-white/10 text-white/40'
+                  )}
+                >
+                  {params.lattice.enabled ? 'ON' : 'OFF'}
+                </button>
+              </div>
+
+              {params.lattice.enabled && (
+                <>
+                  <div className="text-[8px] text-white/35 mb-1.5">SHAPE</div>
+                  <ButtonGroup>
+                    {latticeShapes.slice(0, 3).map(s => (
+                      <PatternButton
+                        key={s.name}
+                        label={s.label}
+                        active={params.lattice.shape === s.name}
+                        onClick={() => onLatticeChange('shape', s.name)}
+                      />
+                    ))}
+                  </ButtonGroup>
+                  <ButtonGroup>
+                    {latticeShapes.slice(3).map(s => (
+                      <PatternButton
+                        key={s.name}
+                        label={s.label}
+                        active={params.lattice.shape === s.name}
+                        onClick={() => onLatticeChange('shape', s.name)}
+                      />
+                    ))}
+                  </ButtonGroup>
+
+                  <div className="text-[8px] text-white/35 mb-1.5 mt-3">BASE POLYGON</div>
+                  <ButtonGroup>
+                    {latticeBases.map(b => (
+                      <PatternButton
+                        key={b.name}
+                        label={b.label}
+                        active={params.lattice.base === b.name}
+                        onClick={() => onLatticeChange('base', b.name)}
+                      />
+                    ))}
+                  </ButtonGroup>
+
+                  <ControlRow label="Shells" value={params.lattice.shells}>
+                    <PrismSlider
+                      value={params.lattice.shells}
+                      min={4}
+                      max={32}
+                      onChange={v => onLatticeChange('shells', v)}
+                    />
+                  </ControlRow>
+                  <ControlRow label="Edge Width" value={params.lattice.edgeWidth.toFixed(1)}>
+                    <PrismSlider
+                      value={params.lattice.edgeWidth * 10}
+                      min={5}
+                      max={50}
+                      onChange={v => onLatticeChange('edgeWidth', v / 10)}
+                    />
+                  </ControlRow>
+                  <ControlRow label="Edge Opacity" value={params.lattice.edgeOpacity.toFixed(2)}>
+                    <PrismSlider
+                      value={params.lattice.edgeOpacity * 100}
+                      min={10}
+                      max={100}
+                      onChange={v => onLatticeChange('edgeOpacity', v / 100)}
+                    />
+                  </ControlRow>
+                  <ControlRow label="Inner Glow" value={params.lattice.innerGlow.toFixed(1)}>
+                    <PrismSlider
+                      value={params.lattice.innerGlow * 10}
+                      min={0}
+                      max={10}
+                      onChange={v => onLatticeChange('innerGlow', v / 10)}
+                    />
+                  </ControlRow>
+                </>
               )}
-            >
-              {params.lattice.enabled ? 'ON' : 'OFF'}
-            </button>
-          </div>
-          
-          {params.lattice.enabled && (
-            <>
-              <div className="text-[8px] text-white/35 mb-1.5">SHAPE</div>
-              <ButtonGroup>
-                {latticeShapes.slice(0, 3).map(s => (
-                  <PatternButton
-                    key={s.name}
-                    label={s.label}
-                    active={params.lattice.shape === s.name}
-                    onClick={() => onLatticeChange('shape', s.name)}
-                  />
-                ))}
-              </ButtonGroup>
-              <ButtonGroup>
-                {latticeShapes.slice(3).map(s => (
-                  <PatternButton
-                    key={s.name}
-                    label={s.label}
-                    active={params.lattice.shape === s.name}
-                    onClick={() => onLatticeChange('shape', s.name)}
-                  />
-                ))}
-              </ButtonGroup>
-              
-              <div className="text-[8px] text-white/35 mb-1.5 mt-3">BASE POLYGON</div>
-              <ButtonGroup>
-                {latticeBases.map(b => (
-                  <PatternButton
-                    key={b.name}
-                    label={b.label}
-                    active={params.lattice.base === b.name}
-                    onClick={() => onLatticeChange('base', b.name)}
-                  />
-                ))}
-              </ButtonGroup>
-              
-              <ControlRow label="Shells" value={params.lattice.shells}>
+            </Section>
+
+            {/* Prism */}
+            <Section title="◈ CENTRAL PRISM">
+              {params.color.mode !== 'spectrum' && (
+                <div className="text-[8px] text-white/35 mb-1.5 leading-relaxed">
+                  Refraction & Dispersion shape the SPECTRUM coloring — switch Color
+                  mode to Spectrum to see them bend the light.
+                </div>
+              )}
+              <ControlRow label="Refraction Index" value={params.refIdx.toFixed(2)}>
                 <PrismSlider
-                  value={params.lattice.shells}
-                  min={4}
-                  max={32}
-                  onChange={v => onLatticeChange('shells', v)}
+                  value={params.refIdx * 100}
+                  min={100}
+                  max={250}
+                  onChange={v => onParamChange('refIdx', v / 100)}
                 />
               </ControlRow>
-              <ControlRow label="Edge Width" value={params.lattice.edgeWidth.toFixed(1)}>
+              <ControlRow label="Dispersion" value={params.dispersion.toFixed(2)}>
                 <PrismSlider
-                  value={params.lattice.edgeWidth * 10}
-                  min={5}
-                  max={50}
-                  onChange={v => onLatticeChange('edgeWidth', v / 10)}
+                  value={params.dispersion * 100}
+                  min={1}
+                  max={20}
+                  onChange={v => onParamChange('dispersion', v / 100)}
                 />
               </ControlRow>
-              <ControlRow label="Edge Opacity" value={params.lattice.edgeOpacity.toFixed(2)}>
+              <ControlRow label="Prism Intensity" value={params.prismInt.toFixed(1)}>
                 <PrismSlider
-                  value={params.lattice.edgeOpacity * 100}
-                  min={10}
-                  max={100}
-                  onChange={v => onLatticeChange('edgeOpacity', v / 100)}
+                  value={params.prismInt * 10}
+                  min={1}
+                  max={30}
+                  onChange={v => onParamChange('prismInt', v / 10)}
                 />
               </ControlRow>
-              <ControlRow label="Inner Glow" value={params.lattice.innerGlow.toFixed(1)}>
+            </Section>
+
+            {/* Rotation */}
+            <Section title="⟳ RODRIGUES ROTATION">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-[9px] text-white/50">Bidirectional (conjugate pair)</label>
+                <button
+                  onClick={() => onParamChange('counter', !params.counter)}
+                  className={cn(
+                    'px-3 py-1 text-[8px] tracking-[1px] rounded-sm border transition-all',
+                    params.counter
+                      ? 'bg-white/20 border-white/40 text-white'
+                      : 'bg-white/4 border-white/10 text-white/40'
+                  )}
+                >
+                  {params.counter ? 'ON' : 'OFF'}
+                </button>
+              </div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-[9px] text-white/50">Chamber (369 tetractys)</label>
+                <button
+                  onClick={() => onParamChange('chamber', !params.chamber)}
+                  className={cn(
+                    'px-3 py-1 text-[8px] tracking-[1px] rounded-sm border transition-all',
+                    params.chamber
+                      ? 'bg-white/20 border-white/40 text-white'
+                      : 'bg-white/4 border-white/10 text-white/40'
+                  )}
+                >
+                  {params.chamber ? 'ON' : 'OFF'}
+                </button>
+              </div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-[9px] text-white/50">Vortex Pump (weave)</label>
+                <button
+                  onClick={() => onParamChange('pump', !params.pump)}
+                  className={cn(
+                    'px-3 py-1 text-[8px] tracking-[1px] rounded-sm border transition-all',
+                    params.pump
+                      ? 'bg-white/20 border-white/40 text-white'
+                      : 'bg-white/4 border-white/10 text-white/40'
+                  )}
+                >
+                  {params.pump ? 'ON' : 'OFF'}
+                </button>
+              </div>
+              <ControlRow label="ωx" value={params.rx.toFixed(1)}>
                 <PrismSlider
-                  value={params.lattice.innerGlow * 10}
+                  value={params.rx * 100}
                   min={0}
-                  max={10}
-                  onChange={v => onLatticeChange('innerGlow', v / 10)}
+                  max={300}
+                  onChange={v => onParamChange('rx', v / 100)}
                 />
               </ControlRow>
-            </>
-          )}
-        </Section>
+              <ControlRow label="ωy" value={params.ry.toFixed(1)}>
+                <PrismSlider
+                  value={params.ry * 100}
+                  min={0}
+                  max={300}
+                  onChange={v => onParamChange('ry', v / 100)}
+                />
+              </ControlRow>
+              <ControlRow label="ωz" value={params.rz.toFixed(1)}>
+                <PrismSlider
+                  value={params.rz * 100}
+                  min={0}
+                  max={300}
+                  onChange={v => onParamChange('rz', v / 100)}
+                />
+              </ControlRow>
+            </Section>
+            <Section title="⚖ THE LAWS · BEAUTIFUL NECESSITY">
+              <ControlRow label="Polarity (Yo·In)" value={params.lawPolarity.toFixed(2)}>
+                <PrismSlider
+                  value={params.lawPolarity * 100}
+                  min={0}
+                  max={100}
+                  onChange={v => onParamChange('lawPolarity', v / 100)}
+                />
+              </ControlRow>
+              <ControlRow label="Trinity" value={params.lawTrinity.toFixed(2)}>
+                <PrismSlider
+                  value={params.lawTrinity * 100}
+                  min={0}
+                  max={100}
+                  onChange={v => onParamChange('lawTrinity', v / 100)}
+                />
+              </ControlRow>
+              <ControlRow label="Consonance" value={params.lawConsonance.toFixed(2)}>
+                <PrismSlider
+                  value={params.lawConsonance * 100}
+                  min={0}
+                  max={100}
+                  onChange={v => onParamChange('lawConsonance', v / 100)}
+                />
+              </ControlRow>
+              <ControlRow label="Diversity" value={params.lawDiversity.toFixed(2)}>
+                <PrismSlider
+                  value={params.lawDiversity * 100}
+                  min={0}
+                  max={100}
+                  onChange={v => onParamChange('lawDiversity', v / 100)}
+                />
+              </ControlRow>
+              <ControlRow label="Balance" value={params.lawBalance.toFixed(2)}>
+                <PrismSlider
+                  value={params.lawBalance * 100}
+                  min={0}
+                  max={100}
+                  onChange={v => onParamChange('lawBalance', v / 100)}
+                />
+              </ControlRow>
+              <ControlRow label="Rhythmic change" value={params.lawRhythm.toFixed(2)}>
+                <PrismSlider
+                  value={params.lawRhythm * 100}
+                  min={0}
+                  max={100}
+                  onChange={v => onParamChange('lawRhythm', v / 100)}
+                />
+              </ControlRow>
+              <ControlRow label="Radiation" value={params.lawRadiation.toFixed(2)}>
+                <PrismSlider
+                  value={params.lawRadiation * 100}
+                  min={0}
+                  max={100}
+                  onChange={v => onParamChange('lawRadiation', v / 100)}
+                />
+              </ControlRow>
+              <ControlRow label="Vesica (temple)" value={params.lawVesica.toFixed(2)}>
+                <PrismSlider
+                  value={params.lawVesica * 100}
+                  min={0}
+                  max={100}
+                  onChange={v => onParamChange('lawVesica', v / 100)}
+                />
+              </ControlRow>
+              <div className="mt-1 mb-1">
+                <label className="text-[9px] text-white/50">Latent geometry</label>
+                <div className="flex gap-1 mt-1">
+                  <button
+                    onClick={() => { onParamChange('lawLatentN', 0) }}
+                    className={cn(
+                      'px-2 py-1 text-[8px] tracking-[1px] rounded-sm border transition-all',
+                      params.lawLatentN === 0
+                        ? 'bg-white/20 border-white/40 text-white'
+                        : 'bg-white/4 border-white/10 text-white/40'
+                    )}
+                  >
+                    OFF
+                  </button>
+                  <button
+                    onClick={() => { onParamChange('lawLatentN', 3) }}
+                    className={cn(
+                      'px-2 py-1 text-[8px] tracking-[1px] rounded-sm border transition-all',
+                      params.lawLatentN === 3
+                        ? 'bg-white/20 border-white/40 text-white'
+                        : 'bg-white/4 border-white/10 text-white/40'
+                    )}
+                  >
+                    3
+                  </button>
+                  <button
+                    onClick={() => { onParamChange('lawLatentN', 4) }}
+                    className={cn(
+                      'px-2 py-1 text-[8px] tracking-[1px] rounded-sm border transition-all',
+                      params.lawLatentN === 4
+                        ? 'bg-white/20 border-white/40 text-white'
+                        : 'bg-white/4 border-white/10 text-white/40'
+                    )}
+                  >
+                    4
+                  </button>
+                  <button
+                    onClick={() => { onParamChange('lawLatentN', 5) }}
+                    className={cn(
+                      'px-2 py-1 text-[8px] tracking-[1px] rounded-sm border transition-all',
+                      params.lawLatentN === 5
+                        ? 'bg-white/20 border-white/40 text-white'
+                        : 'bg-white/4 border-white/10 text-white/40'
+                    )}
+                  >
+                    5
+                  </button>
+                  <button
+                    onClick={() => { onParamChange('lawLatentN', 6) }}
+                    className={cn(
+                      'px-2 py-1 text-[8px] tracking-[1px] rounded-sm border transition-all',
+                      params.lawLatentN === 6
+                        ? 'bg-white/20 border-white/40 text-white'
+                        : 'bg-white/4 border-white/10 text-white/40'
+                    )}
+                  >
+                    6
+                  </button>
+                </div>
+              </div>
+              <ControlRow label="Latent amount" value={params.lawLatentAmt.toFixed(2)}>
+                <PrismSlider
+                  value={params.lawLatentAmt * 100}
+                  min={0}
+                  max={100}
+                  onChange={v => onParamChange('lawLatentAmt', v / 100)}
+                />
+              </ControlRow>
+              <div className="mt-1 mb-1">
+                <label className="text-[9px] text-white/50">Frozen music (interval p:q)</label>
+                <div className="flex gap-1 mt-1 flex-wrap">
+                  <button
+                    onClick={() => { onParamChange('lawIntervalP', 0); onParamChange('lawIntervalQ', 0) }}
+                    className={cn(
+                      'px-2 py-1 text-[8px] tracking-[1px] rounded-sm border transition-all',
+                      params.lawIntervalP === 0
+                        ? 'bg-white/20 border-white/40 text-white'
+                        : 'bg-white/4 border-white/10 text-white/40'
+                    )}
+                  >
+                    OFF
+                  </button>
+                  <button
+                    onClick={() => { onParamChange('lawIntervalP', 1); onParamChange('lawIntervalQ', 2) }}
+                    className={cn(
+                      'px-2 py-1 text-[8px] tracking-[1px] rounded-sm border transition-all',
+                      params.lawIntervalP === 1 && params.lawIntervalQ === 2
+                        ? 'bg-white/20 border-white/40 text-white'
+                        : 'bg-white/4 border-white/10 text-white/40'
+                    )}
+                  >
+                    1:2
+                  </button>
+                  <button
+                    onClick={() => { onParamChange('lawIntervalP', 2); onParamChange('lawIntervalQ', 3) }}
+                    className={cn(
+                      'px-2 py-1 text-[8px] tracking-[1px] rounded-sm border transition-all',
+                      params.lawIntervalP === 2 && params.lawIntervalQ === 3
+                        ? 'bg-white/20 border-white/40 text-white'
+                        : 'bg-white/4 border-white/10 text-white/40'
+                    )}
+                  >
+                    2:3
+                  </button>
+                  <button
+                    onClick={() => { onParamChange('lawIntervalP', 3); onParamChange('lawIntervalQ', 4) }}
+                    className={cn(
+                      'px-2 py-1 text-[8px] tracking-[1px] rounded-sm border transition-all',
+                      params.lawIntervalP === 3 && params.lawIntervalQ === 4
+                        ? 'bg-white/20 border-white/40 text-white'
+                        : 'bg-white/4 border-white/10 text-white/40'
+                    )}
+                  >
+                    3:4
+                  </button>
+                  <button
+                    onClick={() => { onParamChange('lawIntervalP', 4); onParamChange('lawIntervalQ', 5) }}
+                    className={cn(
+                      'px-2 py-1 text-[8px] tracking-[1px] rounded-sm border transition-all',
+                      params.lawIntervalP === 4 && params.lawIntervalQ === 5
+                        ? 'bg-white/20 border-white/40 text-white'
+                        : 'bg-white/4 border-white/10 text-white/40'
+                    )}
+                  >
+                    4:5
+                  </button>
+                  <button
+                    onClick={() => { onParamChange('lawIntervalP', 4); onParamChange('lawIntervalQ', 7) }}
+                    className={cn(
+                      'px-2 py-1 text-[8px] tracking-[1px] rounded-sm border transition-all',
+                      params.lawIntervalP === 4 && params.lawIntervalQ === 7
+                        ? 'bg-white/20 border-white/40 text-white'
+                        : 'bg-white/4 border-white/10 text-white/40'
+                    )}
+                  >
+                    4:7
+                  </button>
+                </div>
+              </div>
+              <ControlRow label="Interval amount" value={params.lawIntervalAmt.toFixed(2)}>
+                <PrismSlider
+                  value={params.lawIntervalAmt * 100}
+                  min={0}
+                  max={100}
+                  onChange={v => onParamChange('lawIntervalAmt', v / 100)}
+                />
+              </ControlRow>
+            </Section>
 
-        {/* Prism */}
-        <Section title="◈ CENTRAL PRISM">
-          {params.color.mode !== 'spectrum' && (
-            <div className="text-[8px] text-white/35 mb-1.5 leading-relaxed">
-              Refraction & Dispersion shape the SPECTRUM coloring — switch Color
-              mode to Spectrum to see them bend the light.
-            </div>
-          )}
-          <ControlRow label="Refraction Index" value={params.refIdx.toFixed(2)}>
-            <PrismSlider
-              value={params.refIdx * 100}
-              min={100}
-              max={250}
-              onChange={v => onParamChange('refIdx', v / 100)}
-            />
-          </ControlRow>
-          <ControlRow label="Dispersion" value={params.dispersion.toFixed(2)}>
-            <PrismSlider
-              value={params.dispersion * 100}
-              min={1}
-              max={20}
-              onChange={v => onParamChange('dispersion', v / 100)}
-            />
-          </ControlRow>
-          <ControlRow label="Prism Intensity" value={params.prismInt.toFixed(1)}>
-            <PrismSlider
-              value={params.prismInt * 10}
-              min={1}
-              max={30}
-              onChange={v => onParamChange('prismInt', v / 10)}
-            />
-          </ControlRow>
-        </Section>
 
-        {/* Rotation */}
-        <Section title="⟳ RODRIGUES ROTATION">
-          <ControlRow label="ωx" value={params.rx.toFixed(1)}>
-            <PrismSlider
-              value={params.rx * 100}
-              min={0}
-              max={300}
-              onChange={v => onParamChange('rx', v / 100)}
-            />
-          </ControlRow>
-          <ControlRow label="ωy" value={params.ry.toFixed(1)}>
-            <PrismSlider
-              value={params.ry * 100}
-              min={0}
-              max={300}
-              onChange={v => onParamChange('ry', v / 100)}
-            />
-          </ControlRow>
-          <ControlRow label="ωz" value={params.rz.toFixed(1)}>
-            <PrismSlider
-              value={params.rz * 100}
-              min={0}
-              max={300}
-              onChange={v => onParamChange('rz', v / 100)}
-            />
-          </ControlRow>
-        </Section>
+            {/* Beams */}
+            <Section title="⚡ BEAM PHYSICS">
+              <ControlRow label="Beam Count" value={params.bc}>
+                <PrismSlider
+                  value={params.bc}
+                  min={0}
+                  max={1000}
+                  step={10}
+                  onChange={v => onParamChange('bc', v)}
+                />
+              </ControlRow>
+              <ControlRow label="Beam Width" value={params.bw.toFixed(1)}>
+                <PrismSlider
+                  value={params.bw * 10}
+                  min={1}
+                  max={50}
+                  onChange={v => onParamChange('bw', v / 10)}
+                />
+              </ControlRow>
+              <ControlRow label="Beam Opacity" value={params.bo.toFixed(2)}>
+                <PrismSlider
+                  value={params.bo * 100}
+                  min={5}
+                  max={100}
+                  onChange={v => onParamChange('bo', v / 100)}
+                />
+              </ControlRow>
+            </Section>
 
-        {/* Beams */}
-        <Section title="⚡ BEAM PHYSICS">
-          <ControlRow label="Beam Count" value={params.bc}>
-            <PrismSlider
-              value={params.bc}
-              min={0}
-              max={1000}
-              step={10}
-              onChange={v => onParamChange('bc', v)}
-            />
-          </ControlRow>
-          <ControlRow label="Beam Width" value={params.bw.toFixed(1)}>
-            <PrismSlider
-              value={params.bw * 10}
-              min={1}
-              max={50}
-              onChange={v => onParamChange('bw', v / 10)}
-            />
-          </ControlRow>
-          <ControlRow label="Beam Opacity" value={params.bo.toFixed(2)}>
-            <PrismSlider
-              value={params.bo * 100}
-              min={5}
-              max={100}
-              onChange={v => onParamChange('bo', v / 100)}
-            />
-          </ControlRow>
-        </Section>
+            {/* DFT Pattern */}
+            <Section title="∿ DFT BEAM PATTERN">
+              <ButtonGroup>
+                {patterns.slice(0, 3).map(p => (
+                  <PatternButton
+                    key={p.name}
+                    label={p.label}
+                    active={params.pattern === p.name}
+                    onClick={() => onPatternChange(p.name)}
+                  />
+                ))}
+              </ButtonGroup>
+              <ButtonGroup>
+                {patterns.slice(3).map(p => (
+                  <PatternButton
+                    key={p.name}
+                    label={p.label}
+                    active={params.pattern === p.name}
+                    onClick={() => onPatternChange(p.name)}
+                  />
+                ))}
+              </ButtonGroup>
+              <ControlRow label="Harmonic k" value={params.harmK}>
+                <PrismSlider
+                  value={params.harmK}
+                  min={1}
+                  max={32}
+                  onChange={v => onParamChange('harmK', v)}
+                />
+              </ControlRow>
+              <ControlRow label="Phase Velocity" value={params.phaseV.toFixed(1)}>
+                <PrismSlider
+                  value={params.phaseV * 10}
+                  min={0}
+                  max={100}
+                  onChange={v => onParamChange('phaseV', v / 10)}
+                />
+              </ControlRow>
+            </Section>
 
-        {/* DFT Pattern */}
-        <Section title="∿ DFT BEAM PATTERN">
-          <ButtonGroup>
-            {patterns.slice(0, 3).map(p => (
-              <PatternButton
-                key={p.name}
-                label={p.label}
-                active={params.pattern === p.name}
-                onClick={() => onPatternChange(p.name)}
-              />
-            ))}
-          </ButtonGroup>
-          <ButtonGroup>
-            {patterns.slice(3).map(p => (
-              <PatternButton
-                key={p.name}
-                label={p.label}
-                active={params.pattern === p.name}
-                onClick={() => onPatternChange(p.name)}
-              />
-            ))}
-          </ButtonGroup>
-          <ControlRow label="Harmonic k" value={params.harmK}>
-            <PrismSlider
-              value={params.harmK}
-              min={1}
-              max={32}
-              onChange={v => onParamChange('harmK', v)}
-            />
-          </ControlRow>
-          <ControlRow label="Phase Velocity" value={params.phaseV.toFixed(1)}>
-            <PrismSlider
-              value={params.phaseV * 10}
-              min={0}
-              max={100}
-              onChange={v => onParamChange('phaseV', v / 10)}
-            />
-          </ControlRow>
-        </Section>
-
-        {/* Dots */}
-        <Section title="● NODE PHYSICS">
-          <ControlRow label="Dot Radius" value={params.dr.toFixed(1)}>
-            <PrismSlider
-              value={params.dr * 10}
-              min={5}
-              max={80}
-              onChange={v => onParamChange('dr', v / 10)}
-            />
-          </ControlRow>
-          <ControlRow label="Glow Radius" value={params.gr}>
-            <PrismSlider
-              value={params.gr}
-              min={0}
-              max={40}
-              onChange={v => onParamChange('gr', v)}
-            />
-          </ControlRow>
-          <ControlRow label="Breathing Amp" value={params.ba.toFixed(2)}>
-            <PrismSlider
-              value={params.ba * 100}
-              min={0}
-              max={20}
-              onChange={v => onParamChange('ba', v / 100)}
-            />
-          </ControlRow>
-        </Section>
+            {/* Dots */}
+            <Section title="● NODE PHYSICS">
+              <ControlRow label="Dot Radius" value={params.dr.toFixed(1)}>
+                <PrismSlider
+                  value={params.dr * 10}
+                  min={5}
+                  max={80}
+                  onChange={v => onParamChange('dr', v / 10)}
+                />
+              </ControlRow>
+              <ControlRow label="Glow Radius" value={params.gr}>
+                <PrismSlider
+                  value={params.gr}
+                  min={0}
+                  max={40}
+                  onChange={v => onParamChange('gr', v)}
+                />
+              </ControlRow>
+              <ControlRow label="Breathing Amp" value={params.ba.toFixed(2)}>
+                <PrismSlider
+                  value={params.ba * 100}
+                  min={0}
+                  max={20}
+                  onChange={v => onParamChange('ba', v / 100)}
+                />
+              </ControlRow>
+            </Section>
           </>
         )}
 

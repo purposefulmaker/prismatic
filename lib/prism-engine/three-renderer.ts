@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// MATH DISCO ENGINE — Three.js WebGL Renderer
+// MATH FractalDot ENGINE — Three.js WebGL Renderer
 // Glowing dots · Beam threads · Prism core · Starfield
 // ═══════════════════════════════════════════════════════════════
 
@@ -132,7 +132,7 @@ void main() {
 // updates a handful of uniforms. This is what lets node counts hit 30k+.
 const GPU_VERTEX = `
 attribute float aSeed;
-uniform float uTime, uPR, uSize, uHarmK, uPhaseV, uWarp, uHueShift, uSpin, uV0;
+uniform float uTime, uPR, uSize, uHarmK, uPhaseV, uWarp, uHueShift, uSpin, uV0, uCounter;
 uniform sampler2D uMask;
 varying vec3 vCol;
 varying float vInt;
@@ -156,8 +156,9 @@ void main() {
   p *= warp;
 
   // GPU rotation (Y then X axis), scaled by spin control
-  float ay = uTime * 0.22 * uSpin * live;
-  float ax = uTime * 0.09 * uSpin * live;
+  float sdir = (uCounter > 0.5 && aSeed < 0.5) ? -1.0 : 1.0;
+  float ay = uTime * 0.22 * uSpin * live * sdir;
+  float ax = uTime * 0.09 * uSpin * live * sdir;
   float cy = cos(ay), sy = sin(ay);
   p = vec3(p.x * cy + p.z * sy, p.y, -p.x * sy + p.z * cy);
   float cx = cos(ax), sx = sin(ax);
@@ -399,6 +400,7 @@ export function createThreeScene(canvas: HTMLCanvasElement, nodeCount: number): 
       uWarp: { value: 0.16 },
       uHueShift: { value: 0.02 },
       uSpin: { value: 1.0 },
+      uCounter: { value: 0.0 },
       uV0: { value: 0 },
       uMask: { value: gpuMaskTexture },
     },
@@ -580,6 +582,7 @@ export function createThreeScene(canvas: HTMLCanvasElement, nodeCount: number): 
   const postQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), toneMaterial)
   postScene.add(postQuad)
 
+
   return {
     renderer,
     scene,
@@ -627,15 +630,13 @@ export function updateViewport(
   threeScene.renderer.setPixelRatio(dpr)
   threeScene.renderer.setSize(width, height)
 
-  // On mobile (< 768px), panel is a bottom-sheet overlay so use full width.
-  // On desktop, reserve 300px for the side panel when it's open.
-  const isMobile = width < 768
-  const panelW = isMobile ? 0 : panelHidden ? 0 : 300
-
-  // Render across the FULL canvas at all times, then bias the camera's optical
-  // center LEFT by panelW/2 via a projection view-offset. This centers the
-  // shape in the visible (non-panel) region using pure matrix math, so it
-  // renders identically at any devicePixelRatio (no device-pixel juggling).
+  // DETERMINISTIC CENTERING: always center the field in the FULL window, with
+  // no panel-aware view offset. The control panel is a right-side overlay; the
+  // field's optical center (world origin) sits at the true window center at all
+  // times, so it can never desync from panel open/close state or DPR. `panelHidden`
+  // is intentionally unused for positioning — it's kept in the signature so the
+  // resize/toggle callers don't need to change.
+  void panelHidden
   threeScene.viewWidth = width
   threeScene.viewHeight = height
   threeScene.canvasWidth = width
@@ -648,19 +649,13 @@ export function updateViewport(
   )
 
   threeScene.camera.aspect = width / height
-  if (panelW > 0) {
-    // Show a full-width frustum but sample it starting panelW/2 to the right,
-    // shifting rendered content left by panelW/2 → visible-region center.
-    threeScene.camera.setViewOffset(width, height, panelW / 2, 0, width, height)
-  } else {
-    threeScene.camera.clearViewOffset()
-  }
+  // No sub-window sampling — the origin projects to the exact center of the canvas.
+  threeScene.camera.clearViewOffset()
   threeScene.camera.updateProjectionMatrix()
 
-  // Size the shape against the VISIBLE region so it fits beside the panel
-  const visibleW = Math.max(60, width - panelW)
+  // Size the shape against the full window (min of width/height keeps it framed)
   const halfTan = Math.tan((FOV * Math.PI) / 360)
-  const targetPx = Math.min(visibleW, height) * 0.33
+  const targetPx = Math.min(width, height) * 0.33
   threeScene.camDist = (height * 0.5) / (targetPx * halfTan) / threeScene.zoom
 
   threeScene.camera.position.set(0, 0, threeScene.camDist)
@@ -727,6 +722,8 @@ export function renderThreeFrame(
     // PRISM mode shows the single-white-light-to-spectrum fan
     floydBeams.visible = !!params.gpuPrism
 
+    prismMesh.visible = !params.chamber && !params.pump
+
     gpuMaterial.uniforms.uTime.value = time
     gpuMaterial.uniforms.uPR.value = renderer.getPixelRatio()
     gpuMaterial.uniforms.uSize.value = params.dr * 0.7
@@ -735,6 +732,7 @@ export function renderThreeFrame(
     gpuMaterial.uniforms.uWarp.value = params.gpuWarp
     gpuMaterial.uniforms.uHueShift.value = params.gpuHue
     gpuMaterial.uniforms.uSpin.value = params.gpuSpin
+    gpuMaterial.uniforms.uCounter.value = params.counter ? 1.0 : 0.0
     // No text-glyph projection in this build — keep the mesh spectral
     gpuMaterial.uniforms.uV0.value = 0
 
@@ -761,6 +759,8 @@ export function renderThreeFrame(
   threeScene.floydBeams.visible = false
   threeScene.dotPoints.visible = true
   threeScene.beamLines.visible = true
+
+  prismMesh.visible = !params.chamber && !params.pump
 
   let beamIndex = 0
 
@@ -821,13 +821,13 @@ export function renderThreeFrame(
   // Mark buffers for update
   dotGeometry.attributes.position.needsUpdate = true
   dotGeometry.attributes.color.needsUpdate = true
-  ;(dotGeometry.attributes.aInt as THREE.BufferAttribute).needsUpdate = true
-  ;(dotGeometry.attributes.aDepth as THREE.BufferAttribute).needsUpdate = true
+    ; (dotGeometry.attributes.aInt as THREE.BufferAttribute).needsUpdate = true
+    ; (dotGeometry.attributes.aDepth as THREE.BufferAttribute).needsUpdate = true
 
   beamGeometry.setDrawRange(0, beamIndex * 2)
   beamGeometry.attributes.position.needsUpdate = true
   beamGeometry.attributes.color.needsUpdate = true
-  ;(beamGeometry.attributes.aAlpha as THREE.BufferAttribute).needsUpdate = true
+    ; (beamGeometry.attributes.aAlpha as THREE.BufferAttribute).needsUpdate = true
 
   // Update uniforms
   dotMaterial.uniforms.uSize.value = params.dr
@@ -875,5 +875,5 @@ export function disposeThreeScene(threeScene: ThreeScene): void {
   threeScene.gpuMaterial.dispose()
   threeScene.gpuMaskTexture.dispose()
   threeScene.floydBeams.geometry.dispose()
-  ;(threeScene.floydBeams.material as THREE.Material).dispose()
+    ; (threeScene.floydBeams.material as THREE.Material).dispose()
 }

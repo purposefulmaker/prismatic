@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// MATH DISCO ENGINE — Color Resolution
+// MATH FractalDot ENGINE — Color Resolution
 // Spectrum · Single · Palette · Gradient
 // ═══════════════════════════════════════════════════════════════
 
@@ -83,8 +83,8 @@ export function resolveNodeColor(
 
     case 'palette': {
       const pal = color.palette.length > 0 ? color.palette : ['#ffffff']
-      // Each dot gets one discrete color from the palette (confetti style)
-      ;[r, g, b] = hexToRGB(pal[node.idx % pal.length])
+        // Each dot gets one discrete color from the palette (confetti style)
+        ;[r, g, b] = hexToRGB(pal[node.idx % pal.length])
       break
     }
 
@@ -114,7 +114,7 @@ export function resolveNodeColor(
     case 'spectrum':
     default: {
       const nm = nodeWavelength(node, refIdx, dispersion)
-      ;[r, g, b] = wavelengthToRGB(nm)
+        ;[r, g, b] = wavelengthToRGB(nm)
       break
     }
   }
