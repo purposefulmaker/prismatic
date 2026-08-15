@@ -48,11 +48,23 @@ export function useThreeEngine(
   const threeSceneRef = useRef<ThreeScene | null>(null)
   const nodesRef = useRef<PrismNode[]>([])
   const volumetricNodesRef = useRef<PrismNode[]>([])
+  // new — the full EngineState shape
   const stateRef = useRef<EngineState>({
+    ax: 0,
+    ay: 0,
+    az: 0,
+    dragX: 0,
+    dragY: 0,
     t: 0,
+    width: 0,
+    height: 0,
+    centerX: 0,
+    centerY: 0,
     radius: 1,
-    phase: 0,
-    rotation: { x: 0, y: 0, z: 0 },
+    zoom: 1,
+    dragging: false,
+    lastMouseX: 0,
+    lastMouseY: 0,
   })
   const paramsRef = useRef<PrismParameters>(params)
   const shapeMaskRef = useRef<Uint8ClampedArray | null>(null)
