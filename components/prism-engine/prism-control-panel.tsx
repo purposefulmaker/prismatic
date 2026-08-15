@@ -790,7 +790,7 @@ export function PrismControlPanel({
                 </button>
               </div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-[9px] text-white/50">Pump (weave)</label>
+                <label className="text-[9px] text-white/50">Vortex Pump (weave)</label>
                 <button
                   onClick={() => onParamChange('pump', !params.pump)}
                   className={cn(
