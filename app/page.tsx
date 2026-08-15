@@ -9,7 +9,7 @@ export default function PrismPage() {
         showControls={true}
         defaultPanelOpen={false}
         showHero={true}
-        initialPreset="the-field"
+        initialPreset="genesis"
         nodeCount={1600}
       />
     </main>
