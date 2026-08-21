@@ -1,13 +1,15 @@
 'use client'
 
 import { useEffect } from 'react'
+import type { MutableRefObject } from 'react'
 import { cn } from '@/lib/utils'
-import type { PrismParameters } from '@/lib/prism-engine'
+import type { PrismParameters, HealingViz } from '@/lib/prism-engine'
 import { PRACTICE_META, type HealingMode } from '@/lib/healing/practices'
 import { useHealingSession } from '@/hooks/use-healing-session'
 
 interface HealingOverlayProps {
   setParams: (p: Partial<PrismParameters>) => void
+  healingVizRef: MutableRefObject<HealingViz | null>
   onClose: () => void
 }
 
@@ -17,7 +19,7 @@ interface HealingOverlayProps {
  * the actual guide. On the landing the field breathes calmly; inside a flow it
  * embodies each step and breathes in lockstep with the practitioner.
  */
-export function HealingOverlay({ setParams, onClose }: HealingOverlayProps) {
+export function HealingOverlay({ setParams, healingVizRef, onClose }: HealingOverlayProps) {
   const {
     mode,
     step,
@@ -31,7 +33,7 @@ export function HealingOverlay({ setParams, onClose }: HealingOverlayProps) {
     start,
     advance,
     exit,
-  } = useHealingSession(setParams)
+  } = useHealingSession(setParams, healingVizRef)
 
   // Escape key: leave the current flow, or close Healing Mode from the landing.
   useEffect(() => {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { MutableRefObject } from 'react'
 import type { PrismParameters, HealingViz, HealingRegion } from '@/lib/prism-engine'
 import {
   PRACTICES,
@@ -47,6 +48,11 @@ const easeCos = (x: number) => 0.5 - 0.5 * Math.cos(Math.PI * Math.min(1, Math.m
 // The calm "home" field shown on the mode-select landing.
 const HOME_SCENE = visualToScene('egg-complete')
 
+// The resting figure on the landing: fully-formed egg, no structures, glow
+// spread across the whole body. Module-scoped so it is a STABLE reference
+// (keeping it inside the hook re-created it each render and thrashed effects).
+const IDLE_FIGURE: FigureTargets = { region: 'whole', aura: 1, roots: 0, shell: 0, crown: 0 }
+
 /**
  * Drives a guided healing session and — crucially — the prism field itself.
  * A single rAF loop smoothly tweens the engine's brightness/size/motion between
@@ -54,7 +60,10 @@ const HOME_SCENE = visualToScene('egg-complete')
  * the practitioner (4s in · 2s hold · 6s out). Exiting a flow returns to the
  * calm landing; leaving Healing Mode entirely is handled by the caller.
  */
-export function useHealingSession(setParams: SetParams): UseHealingSessionReturn {
+export function useHealingSession(
+  setParams: SetParams,
+  vizRef: MutableRefObject<HealingViz | null>
+): UseHealingSessionReturn {
   const [mode, setMode] = useState<HealingMode | null>(null)
   const [stepIndex, setStepIndex] = useState(0)
   const [btnLabel, setBtnLabel] = useState('Begin')
@@ -88,7 +97,6 @@ export function useHealingSession(setParams: SetParams): UseHealingSessionReturn
   // gold light concentrates and which structures (roots/shell/crown/egg) show.
   // Feature amounts tween in slowly so the egg/roots/shell build gracefully;
   // `region` snaps so the glow moves to the body part the words address.
-  const IDLE_FIGURE: FigureTargets = { region: 'none', aura: 1, roots: 0, shell: 0, crown: 0 }
   const regionRef = useRef<HealingRegion>('none')
   const figRef = useRef({ aura: 1, roots: 0, shell: 0, crown: 0 })
   const figTargetRef = useRef({ aura: 1, roots: 0, shell: 0, crown: 0 })
@@ -164,7 +172,10 @@ export function useHealingSession(setParams: SetParams): UseHealingSessionReturn
     f.crown += (ft.crown - f.crown) * fk
     revealRef.current += (1 - revealRef.current) * Math.min(1, dt * 1.5)
 
-    const viz: HealingViz = {
+    // Per-frame breathing viz goes through an IMPERATIVE ref that the renderer
+    // reads directly — never React state — so the field can animate at 60fps
+    // without triggering a re-render each frame.
+    vizRef.current = {
       region: regionRef.current,
       breath: breathLevelRef.current,
       aura: f.aura,
@@ -174,18 +185,28 @@ export function useHealingSession(setParams: SetParams): UseHealingSessionReturn
       reveal: revealRef.current,
     }
 
-    // In figure mode the field breathes continuously, so push every frame.
-    setParamsRef.current({
-      prismInt: d.prismInt,
-      gr: d.gr,
-      dr: d.dr,
-      bo: d.bo,
-      ry: d.ry,
-      ba: d.ba,
-      healingFigure: true,
-      healingViz: viz,
-    })
-    appliedRef.current = { ...d }
+    // Drive params DO live in React state, so only push them when they've
+    // meaningfully changed (color palette shifts), not every frame.
+    const a = appliedRef.current
+    const driveChanged =
+      !a ||
+      Math.abs(a.prismInt - d.prismInt) > 0.01 ||
+      Math.abs(a.gr - d.gr) > 0.1 ||
+      Math.abs(a.dr - d.dr) > 0.02 ||
+      Math.abs(a.bo - d.bo) > 0.005 ||
+      Math.abs(a.ry - d.ry) > 0.004 ||
+      Math.abs(a.ba - d.ba) > 0.003
+    if (driveChanged) {
+      setParamsRef.current({
+        prismInt: d.prismInt,
+        gr: d.gr,
+        dr: d.dr,
+        bo: d.bo,
+        ry: d.ry,
+        ba: d.ba,
+      })
+      appliedRef.current = { ...d }
+    }
 
     rafRef.current = requestAnimationFrame(loop)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -326,7 +347,7 @@ export function useHealingSession(setParams: SetParams): UseHealingSessionReturn
       color: HOME_SCENE.color,
       lattice: HOME_SCENE.lattice,
     })
-  }, [IDLE_FIGURE])
+  }, [])
 
   // ─── Public actions ───
   const start = useCallback((m: HealingMode) => {
@@ -374,11 +395,11 @@ export function useHealingSession(setParams: SetParams): UseHealingSessionReturn
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
       if (stepTimeoutRef.current) clearTimeout(stepTimeoutRef.current)
       if (countdownRef.current) clearInterval(countdownRef.current)
-      // Leaving Healing Mode: turn off the figure so the explorer field
-      // returns to its normal pattern lighting.
-      setParamsRef.current({ healingFigure: false })
+      // Leaving Healing Mode: null the viz ref so the renderer immediately
+      // returns to the normal pattern-lit explorer field.
+      vizRef.current = null
     }
-  }, [loop, paintHome])
+  }, [loop, paintHome, vizRef])
 
   return {
     mode,

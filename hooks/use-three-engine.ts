@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { PrismNode, PrismParameters, EngineState, EngineStats, ThreeScene } from '@/lib/prism-engine'
+import type { PrismNode, PrismParameters, EngineState, EngineStats, ThreeScene, HealingViz } from '@/lib/prism-engine'
 import {
   createFibonacciSphere,
   rodriguesRotate,
@@ -36,6 +36,7 @@ export interface UseThreeEngineReturn {
   isRunning: boolean
   panelHidden: boolean
   setPanelHidden: (hidden: boolean) => void
+  healingVizRef: React.MutableRefObject<HealingViz | null>
 }
 
 export function useThreeEngine(
@@ -67,6 +68,10 @@ export function useThreeEngine(
     lastMouseY: 0,
   })
   const paramsRef = useRef<PrismParameters>(params)
+  // Imperative Healing-Mode channel: the healing session writes the breathing
+  // figure viz here every frame; the render loop reads it directly, bypassing
+  // React state so the field can animate at 60fps without re-rendering.
+  const healingVizRef = useRef<HealingViz | null>(null)
   const shapeMaskRef = useRef<Uint8ClampedArray | null>(null)
   const gpuMaskUploadedRef = useRef<Uint8ClampedArray | null>(null)
   const fpsCounterRef = useRef({ count: 0, lastTime: 0 })
@@ -319,7 +324,7 @@ export function useThreeEngine(
       }
 
       // Render with Three.js
-      renderThreeFrame(threeScene, activeNodes, P, state.t, dt, breath)
+      renderThreeFrame(threeScene, activeNodes, P, state.t, dt, breath, healingVizRef.current)
 
       // FPS calculation
       fpsCounterRef.current.count++
@@ -442,5 +447,6 @@ export function useThreeEngine(
     isRunning,
     panelHidden,
     setPanelHidden,
+    healingVizRef,
   }
 }

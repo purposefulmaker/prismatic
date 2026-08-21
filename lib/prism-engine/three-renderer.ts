@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import * as THREE from 'three'
-import type { PrismNode, PrismParameters } from './types'
+import type { PrismNode, PrismParameters, HealingViz } from './types'
 import { sampleHealingFigure } from './healing-figure'
 import { wavelengthToRGB } from './physics'
 
@@ -693,7 +693,8 @@ export function renderThreeFrame(
   params: PrismParameters,
   time: number,
   dt: number,
-  breath: number
+  breath: number,
+  healingViz?: HealingViz | null
 ): number {
   const {
     dotGeometry,
@@ -765,7 +766,7 @@ export function renderThreeFrame(
   // aura. We freeze nodes to their upright, camera-facing frame (no spin) and
   // replace their color/intensity with the figure light. Beams and the prism
   // ring are suppressed so nothing crosses the body.
-  const figureViz = params.healingFigure ? params.healingViz : undefined
+  const figureViz = healingViz ?? undefined
   prismMesh.visible = !params.chamber && !params.pump && !figureViz
 
   let beamIndex = 0

@@ -80,7 +80,7 @@ export function NothingburgerEngine({
     setColorParam,
   } = usePrismParameters(initialParams)
 
-  const { canvasRef, stats, panelHidden, setPanelHidden } = useThreeEngine(params, {
+  const { canvasRef, stats, panelHidden, setPanelHidden, healingVizRef } = useThreeEngine(params, {
     nodeCount,
   })
 
@@ -210,7 +210,11 @@ export function NothingburgerEngine({
 
       {/* Healing Mode — the living field becomes the guide */}
       {healingOpen && (
-        <HealingOverlay setParams={setParams} onClose={() => setHealingOpen(false)} />
+        <HealingOverlay
+          setParams={setParams}
+          healingVizRef={healingVizRef}
+          onClose={() => setHealingOpen(false)}
+        />
       )}
     </div>
   )
