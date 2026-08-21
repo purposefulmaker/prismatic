@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import * as THREE from 'three'
-import type { PrismNode, PrismParameters } from './types'
+import type { PrismNode, PrismParameters, HealingForm } from './types'
 import { wavelengthToRGB } from './physics'
 
 // ─── Shader Sources ───
@@ -686,6 +686,67 @@ export function updateGpuMask(
   threeScene.gpuMaskTexture.needsUpdate = true
 }
 
+/**
+ * Deform a unit-sphere node (x,y,z; +y is screen-up) toward a healing form.
+ * Pure function, blended by `a` in [0,1]. This is what makes the field
+ * physically BECOME the egg / shell / roots / crown instead of just recoloring.
+ * Returns the morphed [x,y,z]; the caller then applies breath scaling.
+ */
+function morphHealing(
+  x: number,
+  y: number,
+  z: number,
+  form: HealingForm,
+  a: number
+): [number, number, number] {
+  const yUp = Math.max(0, y) // 0..1 upper hemisphere
+  const yDn = Math.max(0, -y) // 0..1 lower hemisphere
+  switch (form) {
+    case 'egg': {
+      // Ovoid: taller, narrower at the crown, gently fuller at the base.
+      const ny = y * (1 + 0.4 * a)
+      const taper = (1 - 0.26 * a * yUp) * (1 + 0.06 * a * yDn)
+      return [x * taper, ny, z * taper]
+    }
+    case 'shell': {
+      // Turtle carapace: domed top, flattened plastron underside + flared rim.
+      if (y >= 0) {
+        const ny = y * (1 - 0.28 * a)
+        const bulge = 1 + 0.14 * a * (1 - yUp)
+        return [x * bulge, ny, z * bulge]
+      }
+      const ny = y + (-0.12 - y) * (0.72 * a) // pull toward a flat plate
+      const rim = 1 + 0.2 * a
+      return [x * rim, ny, z * rim]
+    }
+    case 'roots': {
+      // Grounding: lower nodes stream down into tapering strands; top settles.
+      if (y < 0) {
+        const ny = y * (1 + 1.7 * a * yDn)
+        const taper = 1 - 0.58 * a * yDn
+        return [x * taper, ny, z * taper]
+      }
+      return [x, y * (1 - 0.12 * a), z]
+    }
+    case 'crown': {
+      // Christ-light above: upper nodes rise and converge into a radiant spire.
+      if (y > 0.15) {
+        const ny = y * (1 + 0.95 * a * yUp)
+        const taper = 1 - 0.5 * a * yUp
+        return [x * taper, ny, z * taper]
+      }
+      return [x, y, z]
+    }
+    case 'cord': {
+      // Severance → seal: field draws inward to a clean, contracted sphere.
+      const s = 1 - 0.1 * a
+      return [x * s, y * s, z * s]
+    }
+    default:
+      return [x, y, z]
+  }
+}
+
 export function renderThreeFrame(
   threeScene: ThreeScene,
   nodes: PrismNode[],
@@ -764,12 +825,26 @@ export function renderThreeFrame(
 
   let beamIndex = 0
 
+  // Healing Mode geometric morph — deform the whole field toward a sacred form.
+  const healForm = params.healingForm as HealingForm | undefined
+  const healAmt = params.healingMorph ?? 0
+  const morphing = !!healForm && healForm !== 'sphere' && healAmt > 0.001
+
   // Update dot and beam buffers
   for (let i = 0; i < nodes.length; i++) {
     const n = nodes[i]
-    const bx = n.x * breath
-    const by = -n.y * breath // Y negated to match original orientation
-    const bz = n.z * breath
+    let mx = n.x
+    let my = n.y
+    let mz = n.z
+    if (morphing) {
+      const m = morphHealing(n.x, n.y, n.z, healForm!, healAmt)
+      mx = m[0]
+      my = m[1]
+      mz = m[2]
+    }
+    const bx = mx * breath
+    const by = -my * breath // Y negated to match original orientation
+    const bz = mz * breath
 
     // Dot positions and colors
     dotPositions[i * 3] = bx

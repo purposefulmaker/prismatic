@@ -12,6 +12,7 @@ import type {
   PrismParameters,
   ColorParameters,
   LatticeParameters,
+  HealingForm,
 } from '@/lib/prism-engine'
 import { DEFAULT_COLOR, DEFAULT_LATTICE } from '@/lib/prism-engine'
 
@@ -439,6 +440,39 @@ export interface HealingScene {
   lattice: LatticeParameters
   /** Smoothly-tweened numeric drive targets */
   drive: DriveTargets
+  /** Geometric form the node field morphs into for this step */
+  form: HealingForm
+}
+
+/**
+ * Which sacred geometry each visual step embodies. This is the heart of the
+ * feature — the field literally BECOMES the form, not just a tinted ball.
+ */
+const FORM_BY_VISUAL: Record<string, HealingForm> = {
+  ground: 'roots',
+  breathe: 'sphere',
+  invoke: 'crown',
+  'egg-build': 'egg',
+  'egg-mirror': 'egg',
+  'egg-perm': 'egg',
+  'egg-seal': 'egg',
+  'egg-complete': 'egg',
+  roots: 'roots',
+  'shell-form': 'shell',
+  withdraw: 'shell',
+  declare: 'shell',
+  rest: 'shell',
+  'turtle-complete': 'shell',
+  crown: 'crown',
+  'layered-seal': 'egg',
+  'layered-complete': 'egg',
+  'scan-head': 'sphere',
+  'scan-heart': 'sphere',
+  'scan-gut': 'sphere',
+  dissolve: 'cord',
+  seal: 'egg',
+  'final-breath': 'sphere',
+  'cord-complete': 'egg',
 }
 
 function color(
@@ -463,9 +497,10 @@ const CALM_DRIVE: DriveTargets = {
 
 /**
  * Map a step's `visual` key to a full prism scene. Unknown keys fall back to
- * the calm golden default.
+ * the calm golden default. `visualToScene` wraps this to attach the geometric
+ * form (see FORM_BY_VISUAL).
  */
-export function visualToScene(visual: string): HealingScene {
+function sceneBody(visual: string): Omit<HealingScene, 'form'> {
   switch (visual) {
     // ─── Shared openings ───
     case 'ground':
@@ -629,6 +664,10 @@ export function visualToScene(visual: string): HealingScene {
         drive: { ...CALM_DRIVE },
       }
   }
+}
+
+export function visualToScene(visual: string): HealingScene {
+  return { ...sceneBody(visual), form: FORM_BY_VISUAL[visual] ?? 'sphere' }
 }
 
 /**

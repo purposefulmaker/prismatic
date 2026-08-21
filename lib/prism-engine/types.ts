@@ -31,7 +31,15 @@ export interface PrismNode {
   radius?: number
 }
 
+// Healing Mode geometric forms — the field physically morphs into each,
+// rather than merely recoloring. Applied per-node in the CPU render loop.
+export type HealingForm = 'sphere' | 'egg' | 'shell' | 'roots' | 'crown' | 'cord'
+
 export interface PrismParameters {
+  // Healing Mode: which sacred form the node field is deformed toward, and how
+  // far (0 = untouched sphere, 1 = full form). Only read in the CPU path.
+  healingForm?: HealingForm
+  healingMorph?: number
   // POV persistence time constant
   tau: number
   // Shape scale for text formation

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { PrismParameters } from '@/lib/prism-engine'
+import type { PrismParameters, HealingForm } from '@/lib/prism-engine'
 import {
   PRACTICES,
   visualToScene,
@@ -83,6 +83,14 @@ export function useHealingSession(setParams: SetParams): UseHealingSessionReturn
   const baseDriveRef = useRef<DriveTargets>({ ...CALM_START })
   const appliedRef = useRef<DriveTargets | null>(null)
 
+  // geometric-form morph state — the field physically reshapes into each form.
+  // When the form changes, morph resets to 0 so the field visibly re-forms.
+  const formRef = useRef<HealingForm>('egg')
+  const morphRef = useRef(0)
+  const morphTargetRef = useRef(0)
+  const appliedMorphRef = useRef(-1)
+  const appliedFormRef = useRef<HealingForm | null>(null)
+
   // breath state machine
   const breathActiveRef = useRef(false)
   const breathCyclesRef = useRef(0)
@@ -111,13 +119,15 @@ export function useHealingSession(setParams: SetParams): UseHealingSessionReturn
     if (breathActiveRef.current) {
       const L = advanceBreath(now)
       const b = baseDriveRef.current
+      // Gentle swell: the field expands (ba) and warms slightly on the inhale,
+      // but glow/intensity stay modest so the dot texture never blows to white.
       tgt = {
-        prismInt: b.prismInt * (1 + 0.6 * L),
-        gr: b.gr * (1 + 0.9 * L),
-        dr: b.dr * (1 + 0.3 * L),
-        bo: Math.min(1, b.bo * (1 + 0.7 * L)),
+        prismInt: b.prismInt * (1 + 0.22 * L),
+        gr: b.gr * (1 + 0.28 * L),
+        dr: b.dr * (1 + 0.12 * L),
+        bo: Math.min(1, b.bo * (1 + 0.3 * L)),
         ry: b.ry,
-        ba: b.ba + 0.05 * L,
+        ba: b.ba + 0.06 * L,
         saturation: b.saturation,
       }
     }
@@ -132,9 +142,13 @@ export function useHealingSession(setParams: SetParams): UseHealingSessionReturn
     d.ry += (tgt.ry - d.ry) * k
     d.ba += (tgt.ba - d.ba) * k
 
+    // Ease the geometric morph toward its target (slower than drive so the
+    // reshape reads as a deliberate forming, ~1.5s).
+    morphRef.current += (morphTargetRef.current - morphRef.current) * Math.min(1, dt * 2.0)
+
     // Apply to engine only when meaningfully changed
     const a = appliedRef.current
-    const changed =
+    const driveChanged =
       !a ||
       Math.abs(a.prismInt - d.prismInt) > 0.01 ||
       Math.abs(a.gr - d.gr) > 0.1 ||
@@ -142,7 +156,10 @@ export function useHealingSession(setParams: SetParams): UseHealingSessionReturn
       Math.abs(a.bo - d.bo) > 0.005 ||
       Math.abs(a.ry - d.ry) > 0.004 ||
       Math.abs(a.ba - d.ba) > 0.003
-    if (changed) {
+    const morphChanged =
+      appliedFormRef.current !== formRef.current ||
+      Math.abs(appliedMorphRef.current - morphRef.current) > 0.004
+    if (driveChanged || morphChanged) {
       setParamsRef.current({
         prismInt: d.prismInt,
         gr: d.gr,
@@ -150,8 +167,12 @@ export function useHealingSession(setParams: SetParams): UseHealingSessionReturn
         bo: d.bo,
         ry: d.ry,
         ba: d.ba,
+        healingForm: formRef.current,
+        healingMorph: morphRef.current,
       })
       appliedRef.current = { ...d }
+      appliedMorphRef.current = morphRef.current
+      appliedFormRef.current = formRef.current
     }
 
     rafRef.current = requestAnimationFrame(loop)
@@ -208,11 +229,21 @@ export function useHealingSession(setParams: SetParams): UseHealingSessionReturn
 
     const scene = visualToScene(s.visual)
 
+    // When the geometric form changes, restart the morph from 0 so the field
+    // visibly re-forms into the new shape. Same form → keep it settled at 1.
+    if (scene.form !== formRef.current) {
+      formRef.current = scene.form
+      morphRef.current = 0
+    }
+    morphTargetRef.current = scene.form === 'sphere' ? 0 : 1
+
     // Static + color + geometry applied immediately (color fades via POV tau)
     setParamsRef.current({
       ...HEALING_STATIC_PARAMS,
       color: scene.color,
       lattice: scene.lattice,
+      healingForm: formRef.current,
+      healingMorph: morphRef.current,
     })
 
     // Numeric drive is tweened by the loop
@@ -263,15 +294,20 @@ export function useHealingSession(setParams: SetParams): UseHealingSessionReturn
     }
   }, [mode, stepIndex, clearTimers])
 
-  // Paint the calm golden "home" field on the landing.
+  // Paint the calm golden "home" field on the landing — a settled egg.
   const paintHome = useCallback(() => {
     breathActiveRef.current = false
     targetRef.current = { ...HOME_SCENE.drive }
     baseDriveRef.current = { ...HOME_SCENE.drive }
+    formRef.current = HOME_SCENE.form
+    morphRef.current = 1
+    morphTargetRef.current = 1
     setParamsRef.current({
       ...HEALING_STATIC_PARAMS,
       color: HOME_SCENE.color,
       lattice: HOME_SCENE.lattice,
+      healingForm: HOME_SCENE.form,
+      healingMorph: 1,
     })
   }, [])
 
@@ -321,6 +357,9 @@ export function useHealingSession(setParams: SetParams): UseHealingSessionReturn
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
       if (stepTimeoutRef.current) clearTimeout(stepTimeoutRef.current)
       if (countdownRef.current) clearInterval(countdownRef.current)
+      // Leaving Healing Mode: release the morph so the explorer field is a
+      // clean, undeformed sphere again.
+      setParamsRef.current({ healingForm: 'sphere', healingMorph: 0 })
     }
   }, [loop, paintHome])
 
