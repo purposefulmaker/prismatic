@@ -78,57 +78,63 @@ function HealingLanding({
   onClose: () => void
 }) {
   return (
-    <div className="pointer-events-auto relative flex h-full w-full flex-col overflow-y-auto px-5 py-8 md:px-8">
-      {/* Gentle vignette so text reads over the luminous field, egg still visible */}
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_at_center,transparent_35%,rgba(0,0,0,0.7)_100%)]" />
-      <header className="relative mx-auto mb-8 max-w-2xl text-center">
-        <p className="font-cinzel text-[10px] uppercase tracking-[0.5em] text-heal-accent/70">
-          Healing Mode
-        </p>
-        <h1 className="mt-4 font-cinzel text-2xl font-semibold tracking-[0.15em] text-heal-fg md:text-3xl">
-          The Egg &amp; The Turtle
-        </h1>
-        <p className="mx-auto mt-4 max-w-md text-pretty text-base italic leading-relaxed text-heal-fg/70">
-          Energetic sovereignty, guided by the living field. Choose a practice.
-          Let the sphere breathe with you.
-        </p>
-      </header>
+    <div className="pointer-events-auto relative flex h-full w-full flex-col px-4 py-5 md:px-7 md:py-6">
+      {/* Edge-only shading preserves the sphere as the unobstructed guide. */}
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,transparent_48%,rgba(0,0,0,0.38)_76%,rgba(0,0,0,0.82)_100%)]" />
 
-      <div className="relative mx-auto grid w-full max-w-2xl gap-3 md:grid-cols-2">
-        {PRACTICE_META.map(p => (
-          <button
-            key={p.mode}
-            onClick={() => onSelect(p.mode)}
-            className={cn(
-              'group relative overflow-hidden rounded-lg border border-heal-line bg-heal-card/75 p-5 text-left',
-              'shadow-[0_8px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl transition-all duration-500',
-              'hover:border-heal-accent/60 hover:bg-heal-card/90 focus:outline-none focus-visible:border-heal-accent'
-            )}
-          >
-            <div className="flex items-baseline gap-3">
-              <span className="font-cinzel text-lg text-heal-accent/80">{p.numeral}</span>
-              <h2 className="font-cinzel text-base tracking-[0.12em] text-heal-fg">
-                {p.title}
-              </h2>
-            </div>
-            <p className="mt-2 text-pretty text-[15px] leading-relaxed text-heal-fg/65">
-              {p.desc}
-            </p>
-            <p className="mt-3 font-cinzel text-[9px] uppercase tracking-[0.3em] text-heal-accent/50">
-              {p.time}
-            </p>
-          </button>
-        ))}
-      </div>
-
-      <div className="relative mx-auto mt-8 max-w-2xl text-center">
+      <header className="relative flex items-start justify-between gap-4">
+        <div>
+          <p className="font-cinzel text-[9px] uppercase tracking-[0.45em] text-heal-accent">
+            Healing Mode
+          </p>
+          <h1 className="mt-2 font-cinzel text-lg font-semibold tracking-[0.12em] text-heal-fg md:text-xl">
+            The Egg &amp; The Turtle
+          </h1>
+        </div>
         <button
           onClick={onClose}
-          className="font-cinzel text-[10px] uppercase tracking-[0.35em] text-heal-fg/40 transition-colors hover:text-heal-fg/80"
+          aria-label="Return to the field"
+          className="border border-heal-line bg-black/70 px-3 py-2 font-cinzel text-[9px] uppercase tracking-[0.25em] text-heal-fg transition-colors hover:border-heal-accent"
         >
-          Return to the Field
+          Exit
         </button>
-      </div>
+      </header>
+
+      {/* The center remains completely clear for the living prism sphere. */}
+      <div className="min-h-0 flex-1" aria-hidden="true" />
+
+      <section className="relative mx-auto w-full max-w-4xl border border-heal-line bg-heal-card p-3 shadow-[0_12px_48px_rgba(0,0,0,0.75)] backdrop-blur-xl md:p-4">
+        <div className="mb-3 flex items-end justify-between gap-4">
+          <p className="font-cormorant text-base italic text-heal-muted">
+            Choose a practice. The sphere will guide the field.
+          </p>
+          <span className="hidden font-cinzel text-[8px] uppercase tracking-[0.3em] text-heal-accent md:block">
+            Four guided flows
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+          {PRACTICE_META.map(p => (
+            <button
+              key={p.mode}
+              onClick={() => onSelect(p.mode)}
+              className="group min-h-24 border border-heal-line bg-black/70 p-3 text-left transition-colors hover:border-heal-accent hover:bg-black/90 focus:outline-none focus-visible:border-heal-accent"
+            >
+              <div className="flex items-center gap-2">
+                <span className="font-cinzel text-xs text-heal-accent">{p.numeral}</span>
+                <h2 className="font-cinzel text-[10px] tracking-[0.08em] text-heal-fg md:text-xs">
+                  {p.title}
+                </h2>
+              </div>
+              <p className="mt-2 line-clamp-2 text-sm leading-snug text-heal-muted">
+                {p.desc}
+              </p>
+              <p className="mt-2 font-cinzel text-[8px] uppercase tracking-[0.2em] text-heal-accent">
+                {p.time}
+              </p>
+            </button>
+          ))}
+        </div>
+      </section>
     </div>
   )
 }
@@ -171,16 +177,16 @@ function HealingSession({
           : ''
 
   return (
-    <div className="pointer-events-auto flex h-full w-full flex-col">
-      {/* Top bar: back + progress */}
-      <div className="flex items-center justify-between px-5 pt-6 md:px-8">
+    <div className="pointer-events-auto flex h-full w-full flex-col px-4 py-5 md:px-7 md:py-6">
+      {/* Sparse top rail; the middle of the viewport belongs to the sphere. */}
+      <div className="flex items-center justify-between gap-4">
         <button
           onClick={onBack}
-          className="font-cinzel text-[10px] uppercase tracking-[0.3em] text-heal-fg/45 transition-colors hover:text-heal-fg/85"
+          className="border border-heal-line bg-black/70 px-3 py-2 font-cinzel text-[9px] uppercase tracking-[0.25em] text-heal-fg transition-colors hover:border-heal-accent"
         >
-          ← Back
+          Back
         </button>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5" aria-label={`Step ${stepIndex + 1} of ${totalSteps}`}>
           {Array.from({ length: totalSteps }).map((_, i) => (
             <span
               key={i}
@@ -189,71 +195,69 @@ function HealingSession({
                 i === stepIndex
                   ? 'w-5 bg-heal-accent'
                   : i < stepIndex
-                    ? 'w-1.5 bg-heal-accent/50'
-                    : 'w-1.5 bg-heal-fg/20'
+                    ? 'w-1.5 bg-heal-accent/60'
+                    : 'w-1.5 bg-white/25'
               )}
             />
           ))}
         </div>
       </div>
 
-      {/* Guidance — anchored to the bottom so the sphere breathes in the open space above */}
-      <div className="mt-auto px-5 pb-8 md:px-8">
-        <div className="mx-auto max-w-xl rounded-xl border border-heal-line bg-heal-card/80 p-6 shadow-[0_8px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl md:p-8">
-          <p className="font-cinzel text-[10px] uppercase tracking-[0.4em] text-heal-accent/70">
-            {step.label}
-          </p>
+      <div className="min-h-0 flex-1" aria-hidden="true" />
 
-          <p className="mt-4 text-pretty text-lg leading-relaxed text-heal-fg md:text-xl">
-            {step.main}
-          </p>
-
-          {step.speak && (
-            <p className="mt-4 border-l-2 border-heal-accent/40 pl-4 text-pretty text-lg italic leading-relaxed text-heal-accent">
-              {step.speak}
-            </p>
-          )}
-
-          {step.detail && (
-            <p className="mt-4 text-pretty text-base italic leading-relaxed text-heal-fg/55">
-              {step.detail}
-            </p>
-          )}
-
-          {/* Breath indicator */}
-          {breathPhase && (
-            <div className="mt-6 flex items-center gap-3">
-              <span
-                className={cn(
-                  'h-3 w-3 rounded-full bg-heal-accent transition-transform duration-1000 ease-in-out',
-                  breathPhase === 'inhale' && 'scale-150',
-                  breathPhase === 'hold' && 'scale-150',
-                  breathPhase === 'exhale' && 'scale-75'
-                )}
-              />
-              <span className="font-cinzel text-xs uppercase tracking-[0.3em] text-heal-accent/80">
-                {breathText}
-              </span>
+      {/* Compact guidance rail: never reaches into the sphere's center. */}
+      <section className="mx-auto w-full max-w-4xl border border-heal-line bg-heal-card p-4 shadow-[0_12px_48px_rgba(0,0,0,0.8)] backdrop-blur-xl md:p-5">
+        <div className="grid items-end gap-4 md:grid-cols-[minmax(0,1fr)_15rem]">
+          <div>
+            <div className="flex items-center gap-3">
+              <p className="font-cinzel text-[9px] uppercase tracking-[0.35em] text-heal-accent">
+                {step.label}
+              </p>
+              {breathPhase && (
+                <span className="flex items-center gap-2 font-cinzel text-[9px] uppercase tracking-[0.25em] text-heal-accent">
+                  <span
+                    className={cn(
+                      'h-2 w-2 rounded-full bg-heal-accent transition-transform duration-1000',
+                      breathPhase === 'inhale' && 'scale-150',
+                      breathPhase === 'hold' && 'scale-150',
+                      breathPhase === 'exhale' && 'scale-75'
+                    )}
+                  />
+                  {breathText}
+                </span>
+              )}
             </div>
-          )}
+            <p className="mt-2 text-pretty text-base leading-relaxed text-heal-fg md:text-lg">
+              {step.main}
+            </p>
+            {step.speak && (
+              <p className="mt-2 border-l border-heal-accent pl-3 text-pretty text-base italic leading-relaxed text-heal-accent">
+                {step.speak}
+              </p>
+            )}
+            {step.detail && (
+              <p className="mt-2 text-pretty text-sm italic leading-relaxed text-heal-muted">
+                {step.detail}
+              </p>
+            )}
+          </div>
 
-          {/* Advance button */}
           <button
             onClick={onAdvance}
             disabled={!btnEnabled}
             className={cn(
-              'mt-7 w-full rounded-md border py-3 font-cinzel text-[11px] uppercase tracking-[0.35em] transition-all duration-300',
+              'w-full border py-3 font-cinzel text-[10px] uppercase tracking-[0.3em] transition-colors',
               btnEnabled
-                ? 'border-heal-accent/60 bg-heal-accent/15 text-heal-fg hover:bg-heal-accent/30'
-                : 'cursor-default border-heal-line bg-transparent text-heal-fg/35',
+                ? 'border-heal-accent bg-heal-accent/15 text-heal-fg hover:bg-heal-accent/25'
+                : 'cursor-default border-heal-line bg-black/40 text-heal-muted',
               btnPulsing && 'animate-pulse'
             )}
           >
             {btnLabel}
-            {timerText && <span className="ml-2 text-heal-fg/50">{timerText}</span>}
+            {timerText && <span className="ml-2 text-heal-muted">{timerText}</span>}
           </button>
         </div>
-      </div>
+      </section>
     </div>
   )
 }
