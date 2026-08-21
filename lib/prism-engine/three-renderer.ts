@@ -775,20 +775,18 @@ export function renderThreeFrame(
     const n = nodes[i]
 
     if (figureViz) {
-      // Frozen upright frame: original coords, no rotation. Screen space is
-      // (u = ox → right, v = -oy → up) to match the display's Y negation.
-      const bx = n.ox * breath
-      const by = -n.oy * breath
-      const bz = n.oz * breath
-      const s = sampleHealingFigure(n.ox, -n.oy, figureViz)
-      dotPositions[i * 3] = bx
-      dotPositions[i * 3 + 1] = by
-      dotPositions[i * 3 + 2] = bz
+      // The dot is REPOSITIONED to build the human + aura (y is up here; the
+      // renderer does not negate in this branch). Positions are stable per
+      // node, so only breath/glow animate — no popping.
+      const s = sampleHealingFigure(n.ox, n.oy, n.oz, figureViz)
+      dotPositions[i * 3] = s.x
+      dotPositions[i * 3 + 1] = s.y
+      dotPositions[i * 3 + 2] = s.z
       dotColors[i * 3] = s.r
       dotColors[i * 3 + 1] = s.g
       dotColors[i * 3 + 2] = s.b
       dotIntensities[i] = s.intensity
-      dotDepths[i] = (n.oz + 1) / 2
+      dotDepths[i] = (s.z + 1) / 2
       continue
     }
 

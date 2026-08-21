@@ -84,17 +84,17 @@ function HealingLanding({
 
       <header className="relative flex items-start justify-between gap-4">
         <div>
-          <p className="font-cinzel text-[9px] uppercase tracking-[0.45em] text-heal-accent">
+          <p className="font-mono text-[8px] uppercase tracking-[0.4em] text-heal-accent/90">
             Healing Mode
           </p>
-          <h1 className="mt-2 font-cinzel text-lg font-semibold tracking-[0.12em] text-heal-fg md:text-xl">
+          <h1 className="mt-2 font-cinzel text-lg font-semibold tracking-[0.12em] text-white md:text-xl">
             The Egg &amp; The Turtle
           </h1>
         </div>
         <button
           onClick={onClose}
           aria-label="Return to the field"
-          className="border border-heal-line bg-black/70 px-3 py-2 font-cinzel text-[9px] uppercase tracking-[0.25em] text-heal-fg transition-colors hover:border-heal-accent"
+          className="border border-white/10 bg-black/80 px-3 py-2 font-mono text-[8px] uppercase tracking-[0.25em] text-white/70 transition-colors hover:border-white/30 hover:text-white"
         >
           Exit
         </button>
@@ -103,12 +103,12 @@ function HealingLanding({
       {/* The center remains completely clear for the living prism sphere. */}
       <div className="min-h-0 flex-1" aria-hidden="true" />
 
-      <section className="relative mx-auto w-full max-w-4xl border border-heal-line bg-heal-card p-3 shadow-[0_12px_48px_rgba(0,0,0,0.75)] backdrop-blur-xl md:p-4">
+      <section className="relative mx-auto w-full max-w-4xl border border-white/10 bg-black/90 p-3 shadow-[0_12px_48px_rgba(0,0,0,0.75)] backdrop-blur-xl md:p-4">
         <div className="mb-3 flex items-end justify-between gap-4">
-          <p className="font-cormorant text-base italic text-heal-muted">
+          <p className="font-cormorant text-base italic text-white/60">
             Choose a practice. The sphere will guide the field.
           </p>
-          <span className="hidden font-cinzel text-[8px] uppercase tracking-[0.3em] text-heal-accent md:block">
+          <span className="hidden font-mono text-[8px] uppercase tracking-[0.3em] text-white/35 md:block">
             Four guided flows
           </span>
         </div>
@@ -117,18 +117,18 @@ function HealingLanding({
             <button
               key={p.mode}
               onClick={() => onSelect(p.mode)}
-              className="group min-h-24 border border-heal-line bg-black/70 p-3 text-left transition-colors hover:border-heal-accent hover:bg-black/90 focus:outline-none focus-visible:border-heal-accent"
+              className="group min-h-24 border border-white/8 bg-white/[0.03] p-3 text-left transition-colors hover:border-heal-accent/50 hover:bg-white/[0.06] focus:outline-none focus-visible:border-heal-accent"
             >
               <div className="flex items-center gap-2">
                 <span className="font-cinzel text-xs text-heal-accent">{p.numeral}</span>
-                <h2 className="font-cinzel text-[10px] tracking-[0.08em] text-heal-fg md:text-xs">
+                <h2 className="font-cinzel text-[10px] tracking-[0.08em] text-white md:text-xs">
                   {p.title}
                 </h2>
               </div>
-              <p className="mt-2 line-clamp-2 text-sm leading-snug text-heal-muted">
+              <p className="mt-2 line-clamp-2 text-sm leading-snug text-white/55">
                 {p.desc}
               </p>
-              <p className="mt-2 font-cinzel text-[8px] uppercase tracking-[0.2em] text-heal-accent">
+              <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.2em] text-white/35">
                 {p.time}
               </p>
             </button>
@@ -182,7 +182,7 @@ function HealingSession({
       <div className="flex items-center justify-between gap-4">
         <button
           onClick={onBack}
-          className="border border-heal-line bg-black/70 px-3 py-2 font-cinzel text-[9px] uppercase tracking-[0.25em] text-heal-fg transition-colors hover:border-heal-accent"
+          className="border border-white/10 bg-black/80 px-3 py-2 font-mono text-[8px] uppercase tracking-[0.25em] text-white/70 transition-colors hover:border-white/30 hover:text-white"
         >
           Back
         </button>
@@ -196,7 +196,7 @@ function HealingSession({
                   ? 'w-5 bg-heal-accent'
                   : i < stepIndex
                     ? 'w-1.5 bg-heal-accent/60'
-                    : 'w-1.5 bg-white/25'
+                    : 'w-1.5 bg-white/20'
               )}
             />
           ))}
@@ -206,15 +206,15 @@ function HealingSession({
       <div className="min-h-0 flex-1" aria-hidden="true" />
 
       {/* Compact guidance rail: never reaches into the sphere's center. */}
-      <section className="mx-auto w-full max-w-4xl border border-heal-line bg-heal-card p-4 shadow-[0_12px_48px_rgba(0,0,0,0.8)] backdrop-blur-xl md:p-5">
+      <section className="mx-auto w-full max-w-4xl border border-white/10 bg-black/90 p-4 shadow-[0_12px_48px_rgba(0,0,0,0.8)] backdrop-blur-xl md:p-5">
         <div className="grid items-end gap-4 md:grid-cols-[minmax(0,1fr)_15rem]">
           <div>
             <div className="flex items-center gap-3">
-              <p className="font-cinzel text-[9px] uppercase tracking-[0.35em] text-heal-accent">
+              <p className="font-mono text-[8px] uppercase tracking-[0.35em] text-heal-accent/90">
                 {step.label}
               </p>
               {breathPhase && (
-                <span className="flex items-center gap-2 font-cinzel text-[9px] uppercase tracking-[0.25em] text-heal-accent">
+                <span className="flex items-center gap-2 font-mono text-[8px] uppercase tracking-[0.25em] text-heal-accent/90">
                   <span
                     className={cn(
                       'h-2 w-2 rounded-full bg-heal-accent transition-transform duration-1000',
@@ -227,16 +227,16 @@ function HealingSession({
                 </span>
               )}
             </div>
-            <p className="mt-2 text-pretty text-base leading-relaxed text-heal-fg md:text-lg">
+            <p className="mt-2 text-pretty text-base leading-relaxed text-white md:text-lg">
               {step.main}
             </p>
             {step.speak && (
-              <p className="mt-2 border-l border-heal-accent pl-3 text-pretty text-base italic leading-relaxed text-heal-accent">
+              <p className="mt-2 border-l border-heal-accent/70 pl-3 text-pretty text-base italic leading-relaxed text-heal-accent">
                 {step.speak}
               </p>
             )}
             {step.detail && (
-              <p className="mt-2 text-pretty text-sm italic leading-relaxed text-heal-muted">
+              <p className="mt-2 text-pretty text-sm italic leading-relaxed text-white/55">
                 {step.detail}
               </p>
             )}
@@ -246,15 +246,15 @@ function HealingSession({
             onClick={onAdvance}
             disabled={!btnEnabled}
             className={cn(
-              'w-full border py-3 font-cinzel text-[10px] uppercase tracking-[0.3em] transition-colors',
+              'w-full border py-3 font-mono text-[9px] uppercase tracking-[0.3em] transition-colors',
               btnEnabled
-                ? 'border-heal-accent bg-heal-accent/15 text-heal-fg hover:bg-heal-accent/25'
-                : 'cursor-default border-heal-line bg-black/40 text-heal-muted',
+                ? 'border-heal-accent/60 bg-heal-accent/10 text-white hover:bg-heal-accent/20'
+                : 'cursor-default border-white/10 bg-white/[0.02] text-white/40',
               btnPulsing && 'animate-pulse'
             )}
           >
             {btnLabel}
-            {timerText && <span className="ml-2 text-heal-muted">{timerText}</span>}
+            {timerText && <span className="ml-2 text-white/45">{timerText}</span>}
           </button>
         </div>
       </section>

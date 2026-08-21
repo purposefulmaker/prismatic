@@ -1,15 +1,16 @@
 // ═══════════════════════════════════════════════════════════════
 // HEALING FIGURE — the field draws a human
 //
-// No geometry is added. Like field-forms.ts, this is a per-node SOURCE: for a
-// node's frozen, camera-facing position (u = right, v = up) it returns how
-// much light that node should carry so the dot cloud RESOLVES into a standing
-// human figure — feet on the floor — with gold flowing through the body region
-// the guidance is speaking to, roots below, a turtle dome above, a crown beam,
-// and a breathing golden-egg aura around the whole body.
+// The nodes are a hollow Fibonacci SPHERE SHELL. Masking a 2D silhouette out
+// of that gives a rim-heavy blob, never a readable person. So instead we do
+// what a particle engine is FOR: we REPOSITION each dot to actually build a
+// standing human body — feet on the floor — wrapped in a breathing golden-egg
+// aura, with roots below, a turtle dome, and a crown beam.
 //
-// The engine's own dots, its own breath, its own persistence. We only say
-// which of them are bright, and in what warmth.
+// Every mapping is a PURE function of a node's fixed sphere coords (ox,oy,oz),
+// so each dot keeps its target frame-to-frame (no popping); only the breath
+// and the per-region glow animate. z of a Fibonacci sphere is uniform, so
+// (oz+1)/2 is a perfect uniform seed; the azimuth gives a second one.
 // ═══════════════════════════════════════════════════════════════
 
 import type { HealingViz, HealingRegion } from './types'
@@ -17,170 +18,190 @@ import type { HealingViz, HealingRegion } from './types'
 function clamp(v: number, a: number, b: number): number {
   return v < a ? a : v > b ? b : v
 }
-
-/** Distance from point (px,py) to the line segment a→b. */
-function segDist(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
-  const dx = bx - ax
-  const dy = by - ay
-  const len2 = dx * dx + dy * dy || 1e-6
-  const t = clamp(((px - ax) * dx + (py - ay) * dy) / len2, 0, 1)
-  const cx = ax + t * dx
-  const cy = ay + t * dy
-  return Math.hypot(px - cx, py - cy)
+function fract(x: number): number {
+  return x - Math.floor(x)
+}
+function hash(x: number): number {
+  return fract(Math.sin(x) * 43758.5453)
 }
 
-// ─── The seven parts of the body, in screen space (u ∈ ±0.6, v ∈ ±0.95) ───
-// v = +up. Head near the top, feet at the bottom. Capsule = [ax,ay,bx,by,r].
-type Capsule = [number, number, number, number, number]
+// Warm sacred palette (RGB 0..1)
+const GOLD: [number, number, number] = [1.0, 0.75, 0.32]
+const GOLD_BRIGHT: [number, number, number] = [1.0, 0.93, 0.66]
+const BONE: [number, number, number] = [0.85, 0.78, 0.6]
+const WHITE_GOLD: [number, number, number] = [1.0, 0.98, 0.9]
 
-const HEAD: [number, number, number] = [0, 0.72, 0.145] // cx, cy, r
-const BODY: Capsule[] = [
-  [0, 0.57, 0, 0.5, 0.055], // neck
-  [-0.19, 0.49, 0.19, 0.49, 0.075], // shoulders
-  [0, 0.5, 0, 0.02, 0.15], // torso
-  [-0.19, 0.48, -0.25, 0.0, 0.06], // left arm
-  [0.19, 0.48, 0.25, 0.0, 0.06], // right arm
-  [-0.08, 0.02, -0.1, -0.8, 0.075], // left leg
-  [0.08, 0.02, 0.1, -0.8, 0.075], // right leg
-  [-0.1, -0.8, -0.2, -0.84, 0.05], // left foot
-  [0.1, -0.8, 0.2, -0.84, 0.05], // right foot
+// ─── Human skeleton in screen space (x right, y up). Feet ~ y=-0.86. ───
+// Each part carries a node-budget share so thin limbs still get enough dots
+// to read (area-proportional would starve the arms/legs).
+type Seg = { ax: number; ay: number; bx: number; by: number; r: number; share: number }
+const HEAD = { cx: 0, cy: 0.72, r: 0.15, share: 0.15 }
+const SEGS: Seg[] = [
+  { ax: 0, ay: 0.57, bx: 0, by: 0.5, r: 0.05, share: 0.03 }, // neck
+  { ax: -0.2, ay: 0.5, bx: 0.2, by: 0.5, r: 0.06, share: 0.06 }, // shoulders
+  { ax: 0, ay: 0.5, bx: 0, by: 0.0, r: 0.15, share: 0.24 }, // torso
+  { ax: -0.2, ay: 0.49, bx: -0.27, by: 0.04, r: 0.05, share: 0.09 }, // left arm
+  { ax: 0.2, ay: 0.49, bx: 0.27, by: 0.04, r: 0.05, share: 0.09 }, // right arm
+  { ax: -0.09, ay: 0.02, bx: -0.11, by: -0.78, r: 0.07, share: 0.13 }, // left leg
+  { ax: 0.09, ay: 0.02, bx: 0.11, by: -0.78, r: 0.07, share: 0.13 }, // right leg
+  { ax: -0.11, ay: -0.78, bx: -0.2, by: -0.82, r: 0.045, share: 0.04 }, // left foot
+  { ax: 0.11, ay: -0.78, bx: 0.2, by: -0.82, r: 0.045, share: 0.04 }, // right foot
 ]
 
-/** Body membership 0..1: solid inside the silhouette, soft halo just outside. */
-function bodyMask(u: number, v: number): number {
-  // signed distance to the union (negative inside)
-  let d = 1e3
-  const dh = Math.hypot(u - HEAD[0], v - HEAD[1]) - HEAD[2]
-  if (dh < d) d = dh
-  for (const c of BODY) {
-    const ds = segDist(u, v, c[0], c[1], c[2], c[3]) - c[4]
-    if (ds < d) d = ds
-  }
-  if (d <= 0) return 1
-  // soft rim so the figure edge isn't a hard cutout
-  return Math.exp(-((d / 0.05) * (d / 0.05))) * 0.5
-}
-
-// ─── Region focus: a vertical band of the body the guidance is addressing ───
-const REGION_V: Record<Exclude<HealingRegion, 'whole' | 'none'>, number> = {
+const REGION_Y: Record<Exclude<HealingRegion, 'whole' | 'none'>, number> = {
   feet: -0.8,
   legs: -0.4,
   core: 0.08,
   heart: 0.3,
   head: 0.72,
-  crown: 0.9,
+  crown: 0.95,
 }
-
-/** How strongly a node at height v belongs to the focused region (0..1). */
-function regionFocus(v: number, region: HealingRegion): number {
-  if (region === 'none') return 0
-  if (region === 'whole') return 1
-  const center = REGION_V[region]
-  const w = 0.16
-  const dv = (v - center) / w
-  return Math.exp(-dv * dv)
-}
-
-/** Roots: two tapering strands streaming below the feet. */
-function rootsMask(u: number, v: number): number {
-  if (v > -0.78) return 0
-  const d = Math.min(
-    segDist(u, v, -0.1, -0.8, -0.13, -1.05),
-    segDist(u, v, 0.1, -0.8, 0.13, -1.05)
-  )
-  const taper = clamp((v + 1.05) / 0.27, 0, 1) // thinner as it descends
-  const r = 0.02 + 0.05 * taper
-  return Math.exp(-((d / r) * (d / r)))
-}
-
-/** Turtle dome: an arc shell over the head and shoulders. */
-function shellMask(u: number, v: number): number {
-  if (v < 0.05) return 0
-  const ea = 0.42
-  const eb = 0.62
-  const r = Math.hypot(u / ea, (v - 0.28) / eb)
-  return Math.exp(-(((r - 1) / 0.12) * ((r - 1) / 0.12)))
-}
-
-/** Crown beam: a soft vertical shaft entering the top of the head. */
-function crownMask(u: number, v: number): number {
-  if (v < 0.55) return 0
-  const w = 0.09 + 0.05 * clamp((1 - v) / 0.4, 0, 1)
-  const fall = clamp((v - 0.55) / 0.5, 0, 1)
-  return Math.exp(-((u / w) * (u / w))) * (0.5 + 0.5 * fall)
-}
-
-/** Golden egg: an ovoid shell around the whole body, breathing in and out. */
-function auraMask(u: number, v: number, breath: number): number {
-  // breathe from the inside out and flow back in: shell swells on the inhale
-  const s = 1 + 0.05 * (breath - 0.4)
-  const ea = 0.52 * s
-  const eb = 0.92 * s
-  const r = Math.hypot(u / ea, v / eb)
-  return Math.exp(-(((r - 1) / 0.07) * ((r - 1) / 0.07)))
-}
-
-// Warm sacred palette (linear-ish RGB 0..1)
-const GOLD: [number, number, number] = [1.0, 0.78, 0.4]
-const GOLD_BRIGHT: [number, number, number] = [1.0, 0.92, 0.66]
-const BONE: [number, number, number] = [0.86, 0.79, 0.63]
-const WHITE_GOLD: [number, number, number] = [1.0, 0.97, 0.86]
 
 export interface FigureSample {
+  x: number
+  y: number
+  z: number
   intensity: number
   r: number
   g: number
   b: number
 }
 
+/** Place a node inside a capsule cross-section (disk of radius r). */
+function inCapsule(s: Seg, t: number, ca: number, cr: number): [number, number, number] {
+  const mx = s.ax + (s.bx - s.ax) * t
+  const my = s.ay + (s.by - s.ay) * t
+  // perpendicular direction in screen plane
+  const dx = s.bx - s.ax
+  const dy = s.by - s.ay
+  const len = Math.hypot(dx, dy) || 1
+  const px = -dy / len
+  const py = dx / len
+  const lateral = Math.cos(ca) * cr * s.r
+  const depth = Math.sin(ca) * cr * s.r
+  return [mx + px * lateral, my + py * lateral, depth]
+}
+
 /**
- * Full per-node healing sample. (u,v) is the node's frozen screen position
- * (u right, v up). Returns the light this node should carry so the field reads
- * as the living human figure described by `viz`.
+ * Reposition + light a single node. (ox,oy,oz) are its fixed unit-sphere
+ * coords; returns where the dot should sit and what light it carries so the
+ * whole cloud reads as the living human described by `viz`.
  */
-export function sampleHealingFigure(u: number, v: number, viz: HealingViz): FigureSample {
-  const body = bodyMask(u, v)
-  const focus = regionFocus(v, viz.region)
+export function sampleHealingFigure(ox: number, oy: number, oz: number, viz: HealingViz): FigureSample {
+  // Three decorrelated uniforms from the fixed sphere position.
+  const u1 = (oz + 1) / 2 // uniform in [0,1]
+  const phi = Math.atan2(oy, ox)
+  const u2 = (phi + Math.PI) / (2 * Math.PI)
+  const u3 = hash(u1 * 91.7 + u2 * 47.3)
+  const u4 = hash(u1 * 13.1 + u2 * 71.9 + 3.7)
+  const role = hash(u1 * 39.3 + u2 * 11.1 + 1.3) // partition seed
 
-  // The breath lifts the whole body a touch and swells the focused region so
-  // you can SEE the breath move through (head on the inhale, feet on ground).
-  const regionGlow = body * focus * (0.35 + 0.65 * viz.breath)
+  const breath = viz.breath
+  const rise = 0.015 * (breath - 0.5) // whole figure lifts a touch on inhale
 
-  const rootsG = viz.roots * rootsMask(u, v)
-  const shellG = viz.shell * shellMask(u, v)
-  const crownG = viz.crown * crownMask(u, v)
-  const auraG = viz.aura * auraMask(u, v, viz.breath)
+  // Node-role partition (stable per node): body gets the lion's share.
+  // body 0.55 | aura 0.22 | roots 0.09 | shell 0.09 | crown 0.05
+  let x = 0
+  let y = 0
+  let z = 0
+  let col = GOLD
+  let intensity = 0
 
-  // Weighted color accumulation — each contribution paints in its own warmth.
-  let wr = 0
-  let wg = 0
-  let wb = 0
-  let wsum = 0
-  const add = (w: number, c: [number, number, number]) => {
-    if (w <= 0) return
-    wr += c[0] * w
-    wg += c[1] * w
-    wb += c[2] * w
-    wsum += w
+  if (role < 0.55) {
+    // ── BODY ── pick a part by budget share, then fill its cross-section.
+    let acc = 0
+    let placed = false
+    const pick = u1 // part selector
+    const tot = HEAD.share + SEGS.reduce((s, g) => s + g.share, 0)
+    const target = pick * tot
+    acc = HEAD.share
+    if (target <= acc) {
+      // head disk
+      const ang = u2 * 2 * Math.PI
+      const rad = Math.sqrt(u3) * HEAD.r
+      x = HEAD.cx + Math.cos(ang) * rad
+      y = HEAD.cy + Math.sin(ang) * rad
+      z = (u4 - 0.5) * HEAD.r
+      placed = true
+    } else {
+      for (const s of SEGS) {
+        if (!placed && target <= acc + s.share) {
+          const t = u2
+          const ca = u3 * 2 * Math.PI
+          const cr = Math.sqrt(u4)
+          const p = inCapsule(s, t, ca, cr)
+          x = p[0]
+          y = p[1]
+          z = p[2]
+          placed = true
+        }
+        acc += s.share
+      }
+    }
+    if (!placed) {
+      x = 0
+      y = 0.25
+      z = 0
+    }
+    y += rise
+
+    // Region glow: brighten the body band the guidance is speaking to, and let
+    // the breath pulse move through it (calming from the inside, out and back).
+    let focus = 0
+    if (viz.region === 'whole') focus = 1
+    else if (viz.region !== 'none') {
+      const c = REGION_Y[viz.region]
+      const dv = (y - c) / 0.18
+      focus = Math.exp(-dv * dv)
+    }
+    const base = 0.4
+    const glow = focus * (0.45 + 0.75 * breath)
+    intensity = base + glow
+    col = focus > 0.35 ? GOLD_BRIGHT : GOLD
+  } else if (role < 0.77) {
+    // ── GOLDEN EGG AURA ── ovoid shell that breathes in and out.
+    const swell = 1 + 0.06 * (breath - 0.4)
+    const ea = 0.56 * swell
+    const eb = 0.98 * swell
+    const ang = u2 * 2 * Math.PI
+    const thick = 1 + (u3 - 0.5) * 0.06
+    x = Math.cos(ang) * ea * thick
+    y = Math.sin(ang) * eb * thick + rise
+    z = Math.sin(u4 * 2 * Math.PI) * 0.12 * ea
+    intensity = viz.aura * (0.55 + 0.5 * breath)
+    col = GOLD
+  } else if (role < 0.86) {
+    // ── ROOTS ── strands streaming down from the feet into the earth.
+    const side = u3 < 0.5 ? -1 : 1
+    const t = u2 // 0 at feet → 1 deep
+    const topX = side * 0.11
+    const botX = side * 0.16
+    x = topX + (botX - topX) * t + (u4 - 0.5) * 0.03
+    y = -0.8 - t * 0.35
+    z = (u4 - 0.5) * 0.06
+    intensity = viz.roots * (0.5 + 0.3 * (1 - t)) * (0.7 + 0.3 * breath)
+    col = GOLD
+  } else if (role < 0.95) {
+    // ── TURTLE DOME ── arc shell arcing over head and shoulders.
+    const a = (u2 - 0.5) * Math.PI // -π/2..π/2 across the top
+    const ea = 0.5
+    const eb = 0.66
+    const jitter = 1 + (u3 - 0.5) * 0.05
+    x = Math.sin(a) * ea * jitter
+    y = (0.3 + Math.cos(a) * eb) * jitter + rise
+    z = (u4 - 0.5) * 0.14
+    intensity = viz.shell * (0.5 + 0.35 * breath)
+    col = BONE
+  } else {
+    // ── CROWN BEAM ── soft vertical shaft of light entering the head.
+    const t = u2 // 0 at head top → 1 high above
+    x = (u3 - 0.5) * (0.12 - 0.06 * t)
+    y = 0.86 + t * 0.5 + rise
+    z = (u4 - 0.5) * 0.08
+    intensity = viz.crown * (0.4 + 0.6 * (1 - t)) * (0.6 + 0.4 * breath)
+    col = WHITE_GOLD
   }
 
-  const bodyBase = body * 0.4
-  add(bodyBase, GOLD)
-  add(regionGlow * 0.9, GOLD_BRIGHT)
-  add(rootsG * 0.7, GOLD)
-  add(shellG * 0.7, BONE)
-  add(crownG * 0.95, WHITE_GOLD)
-  add(auraG * 0.8, GOLD)
-
-  let intensity = (bodyBase + regionGlow * 0.9 + rootsG * 0.7 + shellG * 0.7 + crownG * 0.95 + auraG * 0.8)
   intensity = clamp(intensity, 0, 1.4) * viz.reveal
-
-  // A faint warm ambient so the surrounding field is present, not dead black.
-  const ambient = 0.05 * viz.reveal
-  if (intensity < ambient) {
-    return { intensity: ambient, r: 0.45, g: 0.32, b: 0.16 }
-  }
-
-  const inv = wsum > 1e-4 ? 1 / wsum : 0
-  return { intensity, r: wr * inv, g: wg * inv, b: wb * inv }
+  return { x, y, z, intensity, r: col[0], g: col[1], b: col[2] }
 }

@@ -241,21 +241,22 @@ export function useHealingSession(setParams: SetParams): UseHealingSessionReturn
 
     const scene = visualToScene(s.visual)
 
-    // When the geometric form changes, restart the morph from 0 so the field
-    // visibly re-forms into the new shape. Same form → keep it settled at 1.
-    if (scene.form !== formRef.current) {
-      formRef.current = scene.form
-      morphRef.current = 0
+    // Move the gold light to the body part the words address (snaps), and set
+    // the structural feature targets (aura / roots / shell / crown) which the
+    // loop eases in gracefully.
+    regionRef.current = scene.figure.region
+    figTargetRef.current = {
+      aura: scene.figure.aura,
+      roots: scene.figure.roots,
+      shell: scene.figure.shell,
+      crown: scene.figure.crown,
     }
-    morphTargetRef.current = scene.form === 'sphere' ? 0 : 1
 
-    // Static + color + geometry applied immediately (color fades via POV tau)
+    // Static + color applied immediately (color fades via POV tau)
     setParamsRef.current({
       ...HEALING_STATIC_PARAMS,
       color: scene.color,
       lattice: scene.lattice,
-      healingForm: formRef.current,
-      healingMorph: morphRef.current,
     })
 
     // Numeric drive is tweened by the loop
@@ -306,22 +307,26 @@ export function useHealingSession(setParams: SetParams): UseHealingSessionReturn
     }
   }, [mode, stepIndex, clearTimers])
 
-  // Paint the calm golden "home" field on the landing — a settled egg.
+  // Paint the calm "home" field on the landing — the figure resting inside a
+  // fully-formed, slowly breathing golden egg.
   const paintHome = useCallback(() => {
     breathActiveRef.current = false
     targetRef.current = { ...HOME_SCENE.drive }
     baseDriveRef.current = { ...HOME_SCENE.drive }
-    formRef.current = HOME_SCENE.form
-    morphRef.current = 1
-    morphTargetRef.current = 1
+    regionRef.current = IDLE_FIGURE.region
+    figTargetRef.current = {
+      aura: IDLE_FIGURE.aura,
+      roots: IDLE_FIGURE.roots,
+      shell: IDLE_FIGURE.shell,
+      crown: IDLE_FIGURE.crown,
+    }
+    figRef.current = { ...figTargetRef.current }
     setParamsRef.current({
       ...HEALING_STATIC_PARAMS,
       color: HOME_SCENE.color,
       lattice: HOME_SCENE.lattice,
-      healingForm: HOME_SCENE.form,
-      healingMorph: 1,
     })
-  }, [])
+  }, [IDLE_FIGURE])
 
   // ─── Public actions ───
   const start = useCallback((m: HealingMode) => {
@@ -369,9 +374,9 @@ export function useHealingSession(setParams: SetParams): UseHealingSessionReturn
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
       if (stepTimeoutRef.current) clearTimeout(stepTimeoutRef.current)
       if (countdownRef.current) clearInterval(countdownRef.current)
-      // Leaving Healing Mode: release the morph so the explorer field is a
-      // clean, undeformed sphere again.
-      setParamsRef.current({ healingForm: 'sphere', healingMorph: 0 })
+      // Leaving Healing Mode: turn off the figure so the explorer field
+      // returns to its normal pattern lighting.
+      setParamsRef.current({ healingFigure: false })
     }
   }, [loop, paintHome])
 
