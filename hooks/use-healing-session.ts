@@ -308,15 +308,21 @@ export function useHealingSession(setParams: SetParams): UseHealingSessionReturn
     setStepIndex(i => i + 1)
   }, [clearTimers, exit])
 
-  // Cleanup on unmount
+  // Start the single drive loop on mount, paint the calm landing field, and
+  // tear everything down on unmount (leaving Healing Mode).
   useEffect(() => {
+    runningRef.current = true
+    lastFrameRef.current = performance.now()
+    appliedRef.current = null
+    paintHome()
+    rafRef.current = requestAnimationFrame(loop)
     return () => {
       runningRef.current = false
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
       if (stepTimeoutRef.current) clearTimeout(stepTimeoutRef.current)
       if (countdownRef.current) clearInterval(countdownRef.current)
     }
-  }, [])
+  }, [loop, paintHome])
 
   return {
     mode,

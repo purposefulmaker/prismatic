@@ -6,6 +6,7 @@ import { usePrismParameters } from '@/hooks/use-prism-parameters'
 import { PrismStats } from './prism-stats'
 import { PrismEquations } from './prism-equations'
 import { PrismControlPanel } from './prism-control-panel'
+import { HealingOverlay } from './healing-overlay'
 import type { PrismParameters } from '@/lib/prism-engine'
 
 export interface NothingburgerEngineProps {
@@ -65,9 +66,13 @@ export function NothingburgerEngine({
     return defaultPanelOpen
   })
 
+  // Healing Mode — the field becomes a guided energetic practice
+  const [healingOpen, setHealingOpen] = useState(false)
+
   const {
     params,
     setParam,
+    setParams,
     applyPreset,
     setPattern,
     setShapeText,
@@ -109,7 +114,7 @@ export function NothingburgerEngine({
       />
 
       {/* The Field Perceptionist hero overlay */}
-      {showHero && (
+      {showHero && !healingOpen && (
         <>
           {/* Top: title + mode switch */}
           <div className="pointer-events-none fixed inset-x-0 top-0 z-40 flex flex-col items-center gap-2 md:gap-3 px-4 pt-14 md:pt-10">
@@ -156,6 +161,12 @@ export function NothingburgerEngine({
               >
                 FractalDot
               </button>
+              <button
+                onClick={() => setHealingOpen(true)}
+                className="font-mono text-[9px] md:text-[10px] tracking-[0.15em] md:tracking-[0.2em] px-3 md:px-4 py-1.5 rounded-full border border-amber-200/30 bg-transparent text-amber-100/70 transition-colors hover:border-amber-200/70 hover:text-amber-100"
+              >
+                HEALING
+              </button>
             </div>
             {inField && (
               <p className="font-mono text-[7px] md:text-[8px] tracking-[0.15em] md:tracking-[0.25em] text-white/30 text-center text-pretty">
@@ -177,13 +188,13 @@ export function NothingburgerEngine({
       )}
 
       {/* Stats overlay */}
-      {showStats && <PrismStats stats={stats} />}
+      {showStats && !healingOpen && <PrismStats stats={stats} />}
 
       {/* Equations overlay */}
-      {showEquations && <PrismEquations activePattern={params.pattern} />}
+      {showEquations && !healingOpen && <PrismEquations activePattern={params.pattern} />}
 
       {/* Control panel */}
-      {showControls && (
+      {showControls && !healingOpen && (
         <PrismControlPanel
           params={params}
           onParamChange={setParam}
@@ -195,6 +206,11 @@ export function NothingburgerEngine({
           isOpen={panelOpen}
           onToggle={handlePanelToggle}
         />
+      )}
+
+      {/* Healing Mode — the living field becomes the guide */}
+      {healingOpen && (
+        <HealingOverlay setParams={setParams} onClose={() => setHealingOpen(false)} />
       )}
     </div>
   )
