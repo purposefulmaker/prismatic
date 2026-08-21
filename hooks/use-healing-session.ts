@@ -14,6 +14,7 @@ import {
   type FigureTargets,
   type BreathPhase,
 } from '@/lib/healing/practices'
+import { DEFAULT_TUNE, resolveTune, type FigureTune } from '@/lib/healing/figure-tuning'
 
 type SetParams = (p: Partial<PrismParameters>) => void
 
@@ -31,6 +32,19 @@ export interface UseHealingSessionReturn {
   start: (mode: HealingMode) => void
   advance: () => void
   exit: () => void
+  // ── Hand tuning of the particle figure, per phase ──
+  /** The phase key currently being tuned (the step's `visual`) */
+  phaseKey: string
+  /** Live tune values for this phase */
+  tune: FigureTune
+  /** Adjust one knob for this phase (applies instantly) */
+  setTuneField: (key: keyof FigureTune, value: number) => void
+  /** True once this phase has hand-locked edits */
+  phaseLocked: boolean
+  /** Revert this phase to its baked/default values */
+  resetPhase: () => void
+  /** Copy every locked phase as JSON, ready to paste into LOCKED_TUNES */
+  exportTuning: () => string
 }
 
 const CALM_START: DriveTargets = {
@@ -71,6 +85,17 @@ export function useHealingSession(
   const [btnPulsing, setBtnPulsing] = useState(false)
   const [breathPhase, setBreathPhase] = useState<BreathPhase | null>(null)
   const [timerText, setTimerText] = useState('')
+
+  // ─── Hand tuning, per phase ───
+  // `phaseKey` is the current step's visual key. Edits are held per phase in
+  // `sessionTunes` so dialing in one phase never disturbs another.
+  const [phaseKey, setPhaseKey] = useState('egg-complete')
+  const [sessionTunes, setSessionTunes] = useState<Record<string, Partial<FigureTune>>>({})
+  const tune = resolveTune(phaseKey, sessionTunes)
+  const tuneRef = useRef<FigureTune>(tune)
+  tuneRef.current = tune
+  const sessionTunesRef = useRef(sessionTunes)
+  sessionTunesRef.current = sessionTunes
 
   const steps = mode ? PRACTICES[mode] : []
   const totalSteps = steps.length
@@ -183,6 +208,7 @@ export function useHealingSession(
       shell: f.shell,
       crown: f.crown,
       reveal: revealRef.current,
+      tune: tuneRef.current,
     }
 
     // Drive params DO live in React state, so only push them when they've
@@ -262,6 +288,9 @@ export function useHealingSession(
 
     const scene = visualToScene(s.visual)
 
+    // Tune knobs follow the phase, so each one can be dialed in separately.
+    setPhaseKey(s.visual)
+
     // Move the gold light to the body part the words address (snaps), and set
     // the structural feature targets (aura / roots / shell / crown) which the
     // loop eases in gracefully.
@@ -334,6 +363,7 @@ export function useHealingSession(
     breathActiveRef.current = false
     targetRef.current = { ...HOME_SCENE.drive }
     baseDriveRef.current = { ...HOME_SCENE.drive }
+    setPhaseKey('egg-complete')
     regionRef.current = IDLE_FIGURE.region
     figTargetRef.current = {
       aura: IDLE_FIGURE.aura,
@@ -401,6 +431,42 @@ export function useHealingSession(
     }
   }, [loop, paintHome, vizRef])
 
+  // ─── Tuning controls ───
+  // Edits apply instantly (the loop reads tuneRef every frame) and are kept
+  // per phase, so each phase can be dialed in and left alone.
+  const setTuneField = useCallback(
+    (key: keyof FigureTune, value: number) => {
+      setSessionTunes(prev => ({
+        ...prev,
+        [phaseKey]: { ...(prev[phaseKey] ?? {}), [key]: value },
+      }))
+    },
+    [phaseKey]
+  )
+
+  const resetPhase = useCallback(() => {
+    setSessionTunes(prev => {
+      const next = { ...prev }
+      delete next[phaseKey]
+      return next
+    })
+  }, [phaseKey])
+
+  // Emit only the knobs that actually differ from the defaults, so the pasted
+  // block stays small and readable.
+  const exportTuning = useCallback(() => {
+    const out: Record<string, Partial<FigureTune>> = {}
+    for (const [key, partial] of Object.entries(sessionTunesRef.current)) {
+      const diff: Partial<FigureTune> = {}
+      for (const [k, v] of Object.entries(partial)) {
+        const field = k as keyof FigureTune
+        if (typeof v === 'number' && v !== DEFAULT_TUNE[field]) diff[field] = v
+      }
+      if (Object.keys(diff).length) out[key] = diff
+    }
+    return JSON.stringify(out, null, 2)
+  }, [])
+
   return {
     mode,
     step,
@@ -415,5 +481,11 @@ export function useHealingSession(
     start,
     advance,
     exit,
+    phaseKey,
+    tune,
+    setTuneField,
+    phaseLocked: !!sessionTunes[phaseKey],
+    resetPhase,
+    exportTuning,
   }
 }

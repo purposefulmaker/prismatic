@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import type { PrismParameters, HealingViz } from '@/lib/prism-engine'
 import { PRACTICE_META, type HealingMode } from '@/lib/healing/practices'
 import { useHealingSession } from '@/hooks/use-healing-session'
+import { FigureTuner } from './figure-tuner'
 
 interface HealingOverlayProps {
   setParams: (p: Partial<PrismParameters>) => void
@@ -33,6 +34,12 @@ export function HealingOverlay({ setParams, healingVizRef, onClose }: HealingOve
     start,
     advance,
     exit,
+    phaseKey,
+    tune,
+    setTuneField,
+    phaseLocked,
+    resetPhase,
+    exportTuning,
   } = useHealingSession(setParams, healingVizRef)
 
   // Escape key: leave the current flow, or close Healing Mode from the landing.
@@ -65,6 +72,19 @@ export function HealingOverlay({ setParams, healingVizRef, onClose }: HealingOve
           onBack={exit}
         />
       )}
+
+      {/* Hand-tuning panel for the particle figure — sits clear of the sphere
+          on the right edge and stays available in every phase. */}
+      <div className="pointer-events-none fixed right-3 top-1/2 z-10 -translate-y-1/2">
+        <FigureTuner
+          phaseKey={phaseKey}
+          tune={tune}
+          locked={phaseLocked}
+          onChange={setTuneField}
+          onReset={resetPhase}
+          onExport={exportTuning}
+        />
+      </div>
     </div>
   )
 }

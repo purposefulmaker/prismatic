@@ -11,6 +11,9 @@
 // so each dot keeps its target frame-to-frame (no popping); only the breath
 // and the per-region glow animate. z of a Fibonacci sphere is uniform, so
 // (oz+1)/2 is a perfect uniform seed; the azimuth gives a second one.
+//
+// Appearance is driven by viz.tune so every phase can be hand-dialed and
+// locked (see lib/healing/figure-tuning.ts).
 // ═══════════════════════════════════════════════════════════════
 
 import type { HealingViz, HealingRegion } from './types'
@@ -47,6 +50,7 @@ const SEGS: Seg[] = [
   { ax: -0.11, ay: -0.78, bx: -0.2, by: -0.82, r: 0.045, share: 0.04 }, // left foot
   { ax: 0.11, ay: -0.78, bx: 0.2, by: -0.82, r: 0.045, share: 0.04 }, // right foot
 ]
+const SEG_TOTAL = HEAD.share + SEGS.reduce((s, g) => s + g.share, 0)
 
 const REGION_Y: Record<Exclude<HealingRegion, 'whole' | 'none'>, number> = {
   feet: -0.8,
@@ -67,7 +71,7 @@ export interface FigureSample {
   b: number
 }
 
-/** Place a node inside a capsule cross-section (disk of radius r). */
+/** Place a node inside a capsule cross-section (disk of radius r * spread). */
 function inCapsule(s: Seg, t: number, ca: number, cr: number): [number, number, number] {
   const mx = s.ax + (s.bx - s.ax) * t
   const my = s.ay + (s.by - s.ay) * t
@@ -88,6 +92,8 @@ function inCapsule(s: Seg, t: number, ca: number, cr: number): [number, number, 
  * whole cloud reads as the living human described by `viz`.
  */
 export function sampleHealingFigure(ox: number, oy: number, oz: number, viz: HealingViz): FigureSample {
+  const T = viz.tune
+
   // Three decorrelated uniforms from the fixed sphere position.
   const u1 = (oz + 1) / 2 // uniform in [0,1]
   const phi = Math.atan2(oy, ox)
@@ -96,29 +102,36 @@ export function sampleHealingFigure(ox: number, oy: number, oz: number, viz: Hea
   const u4 = hash(u1 * 13.1 + u2 * 71.9 + 3.7)
   const role = hash(u1 * 39.3 + u2 * 11.1 + 1.3) // partition seed
 
-  const breath = viz.breath
-  const rise = 0.015 * (breath - 0.5) // whole figure lifts a touch on inhale
+  // Breath, scaled by the phase's tuned depth.
+  const breath = clamp(0.5 + (viz.breath - 0.5) * T.breathDepth, 0, 1)
+  const rise = 0.015 * (breath - 0.5) * T.breathDepth
 
-  // Node-role partition (stable per node): body gets the lion's share.
-  // body 0.55 | aura 0.22 | roots 0.09 | shell 0.09 | crown 0.05
+  // ── Dot budget. Structure layers are weighted by how PRESENT they are this
+  // phase, so when roots/shell/crown are off, their dots go to the body and
+  // the figure stays dense instead of thinning out.
+  const wBody = Math.max(0.01, T.bodyShare)
+  const wAura = T.auraShare * viz.aura
+  const wRoots = T.rootsShare * viz.roots
+  const wShell = T.shellShare * viz.shell
+  const wCrown = T.crownShare * viz.crown
+  const wTotal = wBody + wAura + wRoots + wShell + wCrown
+  const pick = role * wTotal
+
   let x = 0
   let y = 0
   let z = 0
   let col = GOLD
   let intensity = 0
 
-  if (role < 0.55) {
+  if (pick < wBody) {
     // ── BODY ── pick a part by budget share, then fill its cross-section.
-    let acc = 0
+    const target = u1 * SEG_TOTAL
+    let acc = HEAD.share
     let placed = false
-    const pick = u1 // part selector
-    const tot = HEAD.share + SEGS.reduce((s, g) => s + g.share, 0)
-    const target = pick * tot
-    acc = HEAD.share
     if (target <= acc) {
       // head disk
       const ang = u2 * 2 * Math.PI
-      const rad = Math.sqrt(u3) * HEAD.r
+      const rad = Math.sqrt(u3) * HEAD.r * T.scatter
       x = HEAD.cx + Math.cos(ang) * rad
       y = HEAD.cy + Math.sin(ang) * rad
       z = (u4 - 0.5) * HEAD.r
@@ -126,10 +139,7 @@ export function sampleHealingFigure(ox: number, oy: number, oz: number, viz: Hea
     } else {
       for (const s of SEGS) {
         if (!placed && target <= acc + s.share) {
-          const t = u2
-          const ca = u3 * 2 * Math.PI
-          const cr = Math.sqrt(u4)
-          const p = inCapsule(s, t, ca, cr)
+          const p = inCapsule(s, u2, u3 * 2 * Math.PI, Math.sqrt(u4) * T.scatter)
           x = p[0]
           y = p[1]
           z = p[2]
@@ -151,26 +161,24 @@ export function sampleHealingFigure(ox: number, oy: number, oz: number, viz: Hea
     if (viz.region === 'whole') focus = 1
     else if (viz.region !== 'none') {
       const c = REGION_Y[viz.region]
-      const dv = (y - c) / 0.18
+      const dv = (y - c) / Math.max(0.02, T.glowWidth)
       focus = Math.exp(-dv * dv)
     }
-    const base = 0.4
-    const glow = focus * (0.45 + 0.75 * breath)
-    intensity = base + glow
+    intensity = T.bodyBase + focus * T.bodyGlow * (0.5 + 0.7 * breath)
     col = focus > 0.35 ? GOLD_BRIGHT : GOLD
-  } else if (role < 0.77) {
+  } else if (pick < wBody + wAura) {
     // ── GOLDEN EGG AURA ── ovoid shell that breathes in and out.
     const swell = 1 + 0.06 * (breath - 0.4)
-    const ea = 0.56 * swell
-    const eb = 0.98 * swell
+    const ea = T.eggW * swell
+    const eb = T.eggH * swell
     const ang = u2 * 2 * Math.PI
     const thick = 1 + (u3 - 0.5) * 0.06
     x = Math.cos(ang) * ea * thick
     y = Math.sin(ang) * eb * thick + rise
     z = Math.sin(u4 * 2 * Math.PI) * 0.12 * ea
-    intensity = viz.aura * (0.55 + 0.5 * breath)
+    intensity = viz.aura * T.auraGain * (0.6 + 0.5 * breath)
     col = GOLD
-  } else if (role < 0.86) {
+  } else if (pick < wBody + wAura + wRoots) {
     // ── ROOTS ── strands streaming down from the feet into the earth.
     const side = u3 < 0.5 ? -1 : 1
     const t = u2 // 0 at feet → 1 deep
@@ -179,18 +187,16 @@ export function sampleHealingFigure(ox: number, oy: number, oz: number, viz: Hea
     x = topX + (botX - topX) * t + (u4 - 0.5) * 0.03
     y = -0.8 - t * 0.35
     z = (u4 - 0.5) * 0.06
-    intensity = viz.roots * (0.5 + 0.3 * (1 - t)) * (0.7 + 0.3 * breath)
+    intensity = viz.roots * T.rootsGain * (0.6 + 0.4 * (1 - t)) * (0.7 + 0.3 * breath)
     col = GOLD
-  } else if (role < 0.95) {
+  } else if (pick < wBody + wAura + wRoots + wShell) {
     // ── TURTLE DOME ── arc shell arcing over head and shoulders.
     const a = (u2 - 0.5) * Math.PI // -π/2..π/2 across the top
-    const ea = 0.5
-    const eb = 0.66
     const jitter = 1 + (u3 - 0.5) * 0.05
-    x = Math.sin(a) * ea * jitter
-    y = (0.3 + Math.cos(a) * eb) * jitter + rise
+    x = Math.sin(a) * 0.5 * jitter
+    y = (0.3 + Math.cos(a) * 0.66) * jitter + rise
     z = (u4 - 0.5) * 0.14
-    intensity = viz.shell * (0.5 + 0.35 * breath)
+    intensity = viz.shell * T.shellGain * (0.6 + 0.35 * breath)
     col = BONE
   } else {
     // ── CROWN BEAM ── soft vertical shaft of light entering the head.
@@ -198,10 +204,18 @@ export function sampleHealingFigure(ox: number, oy: number, oz: number, viz: Hea
     x = (u3 - 0.5) * (0.12 - 0.06 * t)
     y = 0.86 + t * 0.5 + rise
     z = (u4 - 0.5) * 0.08
-    intensity = viz.crown * (0.4 + 0.6 * (1 - t)) * (0.6 + 0.4 * breath)
+    intensity = viz.crown * T.crownGain * (0.4 + 0.6 * (1 - t)) * (0.6 + 0.4 * breath)
     col = WHITE_GOLD
   }
 
-  intensity = clamp(intensity, 0, 1.4) * viz.reveal
-  return { x, y, z, intensity, r: col[0], g: col[1], b: col[2] }
+  intensity = clamp(intensity * T.exposure, 0, 1.4) * viz.reveal
+  return {
+    x: x * T.scale,
+    y: y * T.scale,
+    z: z * T.scale,
+    intensity,
+    r: col[0],
+    g: col[1],
+    b: col[2],
+  }
 }

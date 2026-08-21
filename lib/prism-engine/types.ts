@@ -47,6 +47,31 @@ export type HealingRegion =
   | 'whole'
   | 'none'
 
+/**
+ * Hand-tunable knobs for the particle human. Every phase can be dialed in and
+ * locked; see lib/healing/figure-tuning.ts for defaults and locked presets.
+ */
+export interface FigureTune {
+  scale: number
+  scatter: number
+  exposure: number
+  bodyShare: number
+  auraShare: number
+  rootsShare: number
+  shellShare: number
+  crownShare: number
+  bodyBase: number
+  bodyGlow: number
+  auraGain: number
+  rootsGain: number
+  shellGain: number
+  crownGain: number
+  glowWidth: number
+  breathDepth: number
+  eggW: number
+  eggH: number
+}
+
 export interface HealingViz {
   /** Where gold light concentrates on the body this step */
   region: HealingRegion
@@ -62,6 +87,8 @@ export interface HealingViz {
   crown: number
   /** Whole-figure fade-in 0..1 */
   reveal: number
+  /** Hand-tuned appearance knobs for this phase */
+  tune: FigureTune
 }
 
 export interface PrismParameters {
