@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { PrismParameters, HealingForm } from '@/lib/prism-engine'
+import type { PrismParameters, HealingViz, HealingRegion } from '@/lib/prism-engine'
 import {
   PRACTICES,
   visualToScene,
@@ -10,6 +10,7 @@ import {
   type HealingMode,
   type HealingStep,
   type DriveTargets,
+  type FigureTargets,
   type BreathPhase,
 } from '@/lib/healing/practices'
 
@@ -83,13 +84,16 @@ export function useHealingSession(setParams: SetParams): UseHealingSessionReturn
   const baseDriveRef = useRef<DriveTargets>({ ...CALM_START })
   const appliedRef = useRef<DriveTargets | null>(null)
 
-  // geometric-form morph state — the field physically reshapes into each form.
-  // When the form changes, morph resets to 0 so the field visibly re-forms.
-  const formRef = useRef<HealingForm>('egg')
-  const morphRef = useRef(0)
-  const morphTargetRef = useRef(0)
-  const appliedMorphRef = useRef(-1)
-  const appliedFormRef = useRef<HealingForm | null>(null)
+  // Human-figure viz state. The dots draw a standing figure; these drive where
+  // gold light concentrates and which structures (roots/shell/crown/egg) show.
+  // Feature amounts tween in slowly so the egg/roots/shell build gracefully;
+  // `region` snaps so the glow moves to the body part the words address.
+  const IDLE_FIGURE: FigureTargets = { region: 'none', aura: 1, roots: 0, shell: 0, crown: 0 }
+  const regionRef = useRef<HealingRegion>('none')
+  const figRef = useRef({ aura: 1, roots: 0, shell: 0, crown: 0 })
+  const figTargetRef = useRef({ aura: 1, roots: 0, shell: 0, crown: 0 })
+  const revealRef = useRef(0)
+  const breathLevelRef = useRef(0.5)
 
   // breath state machine
   const breathActiveRef = useRef(false)
@@ -118,6 +122,7 @@ export function useHealingSession(setParams: SetParams): UseHealingSessionReturn
     let tgt = targetRef.current
     if (breathActiveRef.current) {
       const L = advanceBreath(now)
+      breathLevelRef.current = L
       const b = baseDriveRef.current
       // Gentle swell: the field expands (ba) and warms slightly on the inhale,
       // but glow/intensity stay modest so the dot texture never blows to white.
@@ -142,38 +147,45 @@ export function useHealingSession(setParams: SetParams): UseHealingSessionReturn
     d.ry += (tgt.ry - d.ry) * k
     d.ba += (tgt.ba - d.ba) * k
 
-    // Ease the geometric morph toward its target (slower than drive so the
-    // reshape reads as a deliberate forming, ~1.5s).
-    morphRef.current += (morphTargetRef.current - morphRef.current) * Math.min(1, dt * 2.0)
-
-    // Apply to engine only when meaningfully changed
-    const a = appliedRef.current
-    const driveChanged =
-      !a ||
-      Math.abs(a.prismInt - d.prismInt) > 0.01 ||
-      Math.abs(a.gr - d.gr) > 0.1 ||
-      Math.abs(a.dr - d.dr) > 0.02 ||
-      Math.abs(a.bo - d.bo) > 0.005 ||
-      Math.abs(a.ry - d.ry) > 0.004 ||
-      Math.abs(a.ba - d.ba) > 0.003
-    const morphChanged =
-      appliedFormRef.current !== formRef.current ||
-      Math.abs(appliedMorphRef.current - morphRef.current) > 0.004
-    if (driveChanged || morphChanged) {
-      setParamsRef.current({
-        prismInt: d.prismInt,
-        gr: d.gr,
-        dr: d.dr,
-        bo: d.bo,
-        ry: d.ry,
-        ba: d.ba,
-        healingForm: formRef.current,
-        healingMorph: morphRef.current,
-      })
-      appliedRef.current = { ...d }
-      appliedMorphRef.current = morphRef.current
-      appliedFormRef.current = formRef.current
+    // When no breath gate is active, the egg still breathes on its own — a
+    // slow autonomous ~8s cycle so the field is always gently alive.
+    if (!breathActiveRef.current) {
+      breathLevelRef.current = 0.5 - 0.5 * Math.cos((now / 8000) * 2 * Math.PI)
     }
+
+    // Ease figure features toward their targets (slow — the egg / roots /
+    // shell / crown build gracefully over ~1.5s), and fade the figure in.
+    const fk = Math.min(1, dt * 1.6)
+    const f = figRef.current
+    const ft = figTargetRef.current
+    f.aura += (ft.aura - f.aura) * fk
+    f.roots += (ft.roots - f.roots) * fk
+    f.shell += (ft.shell - f.shell) * fk
+    f.crown += (ft.crown - f.crown) * fk
+    revealRef.current += (1 - revealRef.current) * Math.min(1, dt * 1.5)
+
+    const viz: HealingViz = {
+      region: regionRef.current,
+      breath: breathLevelRef.current,
+      aura: f.aura,
+      roots: f.roots,
+      shell: f.shell,
+      crown: f.crown,
+      reveal: revealRef.current,
+    }
+
+    // In figure mode the field breathes continuously, so push every frame.
+    setParamsRef.current({
+      prismInt: d.prismInt,
+      gr: d.gr,
+      dr: d.dr,
+      bo: d.bo,
+      ry: d.ry,
+      ba: d.ba,
+      healingFigure: true,
+      healingViz: viz,
+    })
+    appliedRef.current = { ...d }
 
     rafRef.current = requestAnimationFrame(loop)
     // eslint-disable-next-line react-hooks/exhaustive-deps

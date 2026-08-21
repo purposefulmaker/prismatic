@@ -31,15 +31,44 @@ export interface PrismNode {
   radius?: number
 }
 
-// Healing Mode geometric forms — the field physically morphs into each,
-// rather than merely recoloring. Applied per-node in the CPU render loop.
-export type HealingForm = 'sphere' | 'egg' | 'shell' | 'roots' | 'crown' | 'cord'
+// Healing Mode — the dot field draws a standing HUMAN figure (feet on the
+// floor), with gold light flowing through body regions in time with the
+// guidance, wrapped by a breathing golden-egg aura. All computed per-node in
+// the CPU render loop (see healing-figure.ts). This is a light source, not a
+// deformation: it modulates each node's intensity/color, it does not move the
+// sphere into a shape.
+export type HealingRegion =
+  | 'feet'
+  | 'legs'
+  | 'core'
+  | 'heart'
+  | 'head'
+  | 'crown'
+  | 'whole'
+  | 'none'
+
+export interface HealingViz {
+  /** Where gold light concentrates on the body this step */
+  region: HealingRegion
+  /** Current breath level 0..1 — pulses the region + breathes the egg */
+  breath: number
+  /** Golden-egg aura shell strength 0..1 */
+  aura: number
+  /** Roots streaming below the feet 0..1 */
+  roots: number
+  /** Turtle dome over head/back 0..1 */
+  shell: number
+  /** Crown beam of light from above 0..1 */
+  crown: number
+  /** Whole-figure fade-in 0..1 */
+  reveal: number
+}
 
 export interface PrismParameters {
-  // Healing Mode: which sacred form the node field is deformed toward, and how
-  // far (0 = untouched sphere, 1 = full form). Only read in the CPU path.
-  healingForm?: HealingForm
-  healingMorph?: number
+  // Healing Mode: when true, the CPU path carves the human figure + aura from
+  // the node field using healingViz instead of the normal pattern lighting.
+  healingFigure?: boolean
+  healingViz?: HealingViz
   // POV persistence time constant
   tau: number
   // Shape scale for text formation

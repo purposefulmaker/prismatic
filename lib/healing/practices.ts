@@ -12,7 +12,7 @@ import type {
   PrismParameters,
   ColorParameters,
   LatticeParameters,
-  HealingForm,
+  HealingRegion,
 } from '@/lib/prism-engine'
 import { DEFAULT_COLOR, DEFAULT_LATTICE } from '@/lib/prism-engine'
 
@@ -433,6 +433,16 @@ export interface DriveTargets {
   saturation: number
 }
 
+/** The figure state a step drives: where light concentrates + which structural
+ *  features (roots, turtle dome, crown beam, golden-egg aura) are present. */
+export interface FigureTargets {
+  region: HealingRegion
+  aura: number
+  roots: number
+  shell: number
+  crown: number
+}
+
 export interface HealingScene {
   /** Full color object (engine expects a complete ColorParameters) */
   color: ColorParameters
@@ -440,40 +450,49 @@ export interface HealingScene {
   lattice: LatticeParameters
   /** Smoothly-tweened numeric drive targets */
   drive: DriveTargets
-  /** Geometric form the node field morphs into for this step */
-  form: HealingForm
+  /** The human-figure state this step embodies */
+  figure: FigureTargets
 }
 
 /**
- * Which sacred geometry each visual step embodies. This is the heart of the
- * feature — the field literally BECOMES the form, not just a tinted ball.
+ * Which part of the body each guidance step is speaking to, and which
+ * structures are present. THIS is the feature: the dots draw a human, and the
+ * gold light moves to wherever the words point — feet as you ground, head as
+ * you breathe, the egg building around you as you seal it.
  */
-const FORM_BY_VISUAL: Record<string, HealingForm> = {
-  ground: 'roots',
-  breathe: 'sphere',
-  invoke: 'crown',
-  'egg-build': 'egg',
-  'egg-mirror': 'egg',
-  'egg-perm': 'egg',
-  'egg-seal': 'egg',
-  'egg-complete': 'egg',
-  roots: 'roots',
-  'shell-form': 'shell',
-  withdraw: 'shell',
-  declare: 'shell',
-  rest: 'shell',
-  'turtle-complete': 'shell',
-  crown: 'crown',
-  'layered-seal': 'egg',
-  'layered-complete': 'egg',
-  'scan-head': 'sphere',
-  'scan-heart': 'sphere',
-  'scan-gut': 'sphere',
-  dissolve: 'cord',
-  seal: 'egg',
-  'final-breath': 'sphere',
-  'cord-complete': 'egg',
+const FIGURE_BY_VISUAL: Record<string, FigureTargets> = {
+  // openings
+  ground: { region: 'feet', aura: 0, roots: 0.2, shell: 0, crown: 0 },
+  breathe: { region: 'head', aura: 0.15, roots: 0, shell: 0, crown: 0 },
+  invoke: { region: 'whole', aura: 0.3, roots: 0, shell: 0, crown: 0.25 },
+  // the egg
+  'egg-build': { region: 'crown', aura: 1, roots: 0, shell: 0, crown: 0.35 },
+  'egg-mirror': { region: 'whole', aura: 1, roots: 0, shell: 0, crown: 0 },
+  'egg-perm': { region: 'heart', aura: 1, roots: 0, shell: 0, crown: 0 },
+  'egg-seal': { region: 'whole', aura: 1, roots: 0, shell: 0, crown: 0 },
+  'egg-complete': { region: 'none', aura: 1, roots: 0, shell: 0, crown: 0 },
+  // the turtle
+  roots: { region: 'feet', aura: 0, roots: 1, shell: 0, crown: 0 },
+  'shell-form': { region: 'head', aura: 0, roots: 0.5, shell: 1, crown: 0 },
+  withdraw: { region: 'heart', aura: 0, roots: 0.5, shell: 1, crown: 0 },
+  declare: { region: 'heart', aura: 0, roots: 0.5, shell: 1, crown: 0 },
+  rest: { region: 'core', aura: 0, roots: 0.5, shell: 1, crown: 0 },
+  'turtle-complete': { region: 'none', aura: 0, roots: 0.6, shell: 1, crown: 0 },
+  // layered defense
+  crown: { region: 'crown', aura: 1, roots: 0.6, shell: 1, crown: 1 },
+  'layered-seal': { region: 'whole', aura: 1, roots: 1, shell: 1, crown: 1 },
+  'layered-complete': { region: 'none', aura: 1, roots: 0.6, shell: 0.8, crown: 0.7 },
+  // cord severance
+  'scan-head': { region: 'head', aura: 0.5, roots: 0, shell: 0, crown: 0 },
+  'scan-heart': { region: 'heart', aura: 0.5, roots: 0, shell: 0, crown: 0 },
+  'scan-gut': { region: 'core', aura: 0.5, roots: 0, shell: 0, crown: 0 },
+  dissolve: { region: 'whole', aura: 0.7, roots: 0, shell: 0, crown: 0.4 },
+  seal: { region: 'core', aura: 0.9, roots: 0, shell: 0, crown: 0.5 },
+  'final-breath': { region: 'whole', aura: 0.9, roots: 0, shell: 0, crown: 0 },
+  'cord-complete': { region: 'none', aura: 1, roots: 0, shell: 0, crown: 0 },
 }
+
+const DEFAULT_FIGURE: FigureTargets = { region: 'whole', aura: 0.5, roots: 0, shell: 0, crown: 0 }
 
 function color(
   over: Partial<ColorParameters> & Pick<ColorParameters, 'mode'>
@@ -500,7 +519,7 @@ const CALM_DRIVE: DriveTargets = {
  * the calm golden default. `visualToScene` wraps this to attach the geometric
  * form (see FORM_BY_VISUAL).
  */
-function sceneBody(visual: string): Omit<HealingScene, 'form'> {
+function sceneBody(visual: string): Omit<HealingScene, 'figure'> {
   switch (visual) {
     // ─── Shared openings ───
     case 'ground':
@@ -667,7 +686,7 @@ function sceneBody(visual: string): Omit<HealingScene, 'form'> {
 }
 
 export function visualToScene(visual: string): HealingScene {
-  return { ...sceneBody(visual), form: FORM_BY_VISUAL[visual] ?? 'sphere' }
+  return { ...sceneBody(visual), figure: FIGURE_BY_VISUAL[visual] ?? DEFAULT_FIGURE }
 }
 
 /**
