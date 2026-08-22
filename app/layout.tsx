@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono, Cinzel, Cormorant_Garamond } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
@@ -26,6 +26,16 @@ export const metadata: Metadata = {
     'The Beautiful Necessity: a living field rendered as physics — a Fibonacci lattice on the golden angle, Cauchy dispersion, Rodrigues rotation, and POV persistence. Seeing the field. Feeling the field. Being the field.',
   // Icons are provided by the file-based convention: app/icon.png (the mandala)
   // and app/apple-icon.png. No explicit `icons` block so nothing overrides them.
+}
+
+// `viewportFit: 'cover'` is what makes env(safe-area-inset-*) resolve to real
+// values — without it the bottom sheet's close control ends up underneath the
+// phone's home indicator / browser toolbar and becomes untappable.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#000000',
 }
 
 export default function RootLayout({
