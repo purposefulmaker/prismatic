@@ -260,8 +260,18 @@ export function useHealingSession(
       }
       return 1
     }
-    // exhale
-    if (elapsed >= BREATH_TIMING.exhale) {
+    if (phase === 'exhale') {
+      if (elapsed >= BREATH_TIMING.exhale) {
+        breathPhaseRef.current = 'holdOut'
+        breathPhaseStartRef.current = now
+        setBreathPhase('holdOut')
+        return 0
+      }
+      return easeCos(1 - elapsed / BREATH_TIMING.exhale)
+    }
+    // holdOut — the still point at the base of the breath, egg resting
+    // contracted. A round is only complete once this fourth beat finishes.
+    if (elapsed >= BREATH_TIMING.holdOut) {
       breathCyclesRef.current += 1
       if (breathCyclesRef.current >= breathTargetRef.current) {
         // Breath complete → release the gate
@@ -277,7 +287,7 @@ export function useHealingSession(
       setBreathPhase('inhale')
       return 0
     }
-    return easeCos(1 - elapsed / BREATH_TIMING.exhale)
+    return 0
   }, [])
 
   // ─── Apply a step whenever mode / stepIndex changes ───

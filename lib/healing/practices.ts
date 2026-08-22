@@ -89,8 +89,8 @@ export const PRACTICES: Record<HealingMode, HealingStep[]> = {
     },
     {
       label: 'Breathe',
-      main: 'Close your eyes. Breathe in slowly through your nose for 4 counts. Hold for 2. Exhale through your mouth for 6.',
-      detail: 'Do this 4 times. Match the rhythm of the field.',
+  main: 'Close your eyes. In through the nose for 4. Hold full for 4. Out through the mouth for 6. Rest empty for 2.',
+  detail: 'Four rounds of the Golden Egg Breath. All four beats — the rest at the bottom matters as much as the breath in.',
       speak: '',
       breath: 4,
       duration: 0,
@@ -164,8 +164,8 @@ export const PRACTICES: Record<HealingMode, HealingStep[]> = {
     },
     {
       label: 'Breathe',
-      main: 'Slow your breath. In through the nose, 4 counts. Out through the mouth, 6 counts.',
-      detail: '3 cycles. Slow down. The turtle does not rush.',
+  main: 'Slow your breath. In through the nose for 4. Hold full for 4. Out through the mouth for 6. Rest empty for 2.',
+  detail: '3 rounds. Slow down. The turtle does not rush — especially not through the stillness at the bottom.',
       speak: '',
       breath: 3,
       duration: 0,
@@ -239,8 +239,8 @@ export const PRACTICES: Record<HealingMode, HealingStep[]> = {
     },
     {
       label: 'Breathe',
-      main: 'Four breaths. Slow. In through nose, 4 counts. Hold 2. Out through mouth, 6.',
-      detail: 'Each exhale pushes tension out of the body. Each inhale draws in clean light.',
+  main: 'Four rounds. Slow. In for 4. Hold full for 4. Out for 6. Rest empty for 2.',
+  detail: 'Each exhale pushes tension out of the body. Each inhale draws in clean light. Each rest lets it settle.',
       speak: '',
       breath: 4,
       duration: 0,
@@ -722,6 +722,25 @@ export const HEALING_STATIC_PARAMS: Partial<PrismParameters> = {
   lawIntervalQ: 0,
 }
 
-// Breath phase durations (ms) — 4 in · 2 hold · 6 out
-export const BREATH_TIMING = { inhale: 4000, hold: 2000, exhale: 6000 } as const
-export type BreathPhase = 'inhale' | 'hold' | 'exhale'
+/**
+ * THE GOLDEN EGG BREATH — a complete four-beat round:
+ *
+ *   inhale 4  →  hold full 4  →  exhale 6  →  hold empty 2
+ *
+ * All four beats matter. The top hold is where the egg sits fully formed and
+ * radiant; the bottom hold (`holdOut`) is the still point at the base of the
+ * breath, where the egg rests contracted before the next inhale rebuilds it.
+ * The long exhale is what actually settles the nervous system.
+ */
+export const BREATH_TIMING = {
+  inhale: 4000,
+  hold: 4000,
+  exhale: 6000,
+  holdOut: 2000,
+} as const
+
+export type BreathPhase = 'inhale' | 'hold' | 'exhale' | 'holdOut'
+
+/** Total length of one full Golden Egg Breath round (ms) */
+export const BREATH_CYCLE_MS =
+  BREATH_TIMING.inhale + BREATH_TIMING.hold + BREATH_TIMING.exhale + BREATH_TIMING.holdOut

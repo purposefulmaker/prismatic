@@ -189,14 +189,16 @@ function HealingSession({
 }) {
   if (!step) return null
 
-  const breathText =
-    breathPhase === 'inhale'
-      ? 'Breathe in'
-      : breathPhase === 'hold'
-        ? 'Hold'
-        : breathPhase === 'exhale'
-          ? 'Breathe out'
-          : ''
+  // The four beats of the Golden Egg Breath, in order.
+  const BEATS = [
+    { phase: 'inhale', text: 'Breathe in', count: '4' },
+    { phase: 'hold', text: 'Hold full', count: '4' },
+    { phase: 'exhale', text: 'Breathe out', count: '6' },
+    { phase: 'holdOut', text: 'Rest empty', count: '2' },
+  ] as const
+
+  const activeBeat = BEATS.findIndex(b => b.phase === breathPhase)
+  const breathText = activeBeat >= 0 ? BEATS[activeBeat].text : ''
 
   return (
     <div className="pointer-events-auto flex h-full w-full flex-col px-4 py-5 md:px-7 md:py-6">
@@ -236,16 +238,33 @@ function HealingSession({
                 {step.label}
               </p>
               {breathPhase && (
-                <span className="flex items-center gap-2 font-mono text-[8px] uppercase tracking-[0.25em] text-heal-accent/90">
+                <span
+                  className="flex items-center gap-2 font-mono text-[8px] uppercase tracking-[0.25em] text-heal-accent/90"
+                  aria-live="polite"
+                >
+                  {/* Dot swells on the full beats, contracts on the empty ones */}
                   <span
                     className={cn(
                       'h-2 w-2 rounded-full bg-heal-accent transition-transform duration-1000',
-                      breathPhase === 'inhale' && 'scale-150',
-                      breathPhase === 'hold' && 'scale-150',
-                      breathPhase === 'exhale' && 'scale-75'
+                      (breathPhase === 'inhale' || breathPhase === 'hold') && 'scale-150',
+                      (breathPhase === 'exhale' || breathPhase === 'holdOut') && 'scale-75'
                     )}
                   />
                   {breathText}
+                  {/* All four beats stay visible so the round reads as a whole */}
+                  <span className="ml-1 flex items-center gap-1" aria-hidden="true">
+                    {BEATS.map((b, i) => (
+                      <span
+                        key={b.phase}
+                        className={cn(
+                          'h-1 rounded-full transition-all duration-300',
+                          i === activeBeat
+                            ? 'w-3 bg-heal-accent'
+                            : 'w-1 bg-heal-accent/25'
+                        )}
+                      />
+                    ))}
+                  </span>
                 </span>
               )}
             </div>
