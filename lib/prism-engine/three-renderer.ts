@@ -4,7 +4,8 @@
 // ═══════════════════════════════════════════════════════════════
 
 import * as THREE from 'three'
-import type { PrismNode, PrismParameters } from './types'
+import type { PrismNode, PrismParameters, HealingViz } from './types'
+import { sampleHealingFigure } from './healing-figure'
 import { wavelengthToRGB } from './physics'
 
 // ─── Shader Sources ───
@@ -692,7 +693,8 @@ export function renderThreeFrame(
   params: PrismParameters,
   time: number,
   dt: number,
-  breath: number
+  breath: number,
+  healingViz?: HealingViz | null
 ): number {
   const {
     dotGeometry,
@@ -760,16 +762,41 @@ export function renderThreeFrame(
   threeScene.dotPoints.visible = true
   threeScene.beamLines.visible = true
 
-  prismMesh.visible = !params.chamber && !params.pump
+  // Healing Mode figure: the dot field draws a standing human + golden-egg
+  // aura. We freeze nodes to their upright, camera-facing frame (no spin) and
+  // replace their color/intensity with the figure light. Beams and the prism
+  // ring are suppressed so nothing crosses the body.
+  const figureViz = healingViz ?? undefined
+  prismMesh.visible = !params.chamber && !params.pump && !figureViz
 
   let beamIndex = 0
 
   // Update dot and beam buffers
   for (let i = 0; i < nodes.length; i++) {
     const n = nodes[i]
-    const bx = n.x * breath
-    const by = -n.y * breath // Y negated to match original orientation
-    const bz = n.z * breath
+
+    if (figureViz) {
+      // The dot is REPOSITIONED to build the human + aura (y is up here; the
+      // renderer does not negate in this branch). Positions are stable per
+      // node, so only breath/glow animate — no popping.
+      const s = sampleHealingFigure(n.ox, n.oy, n.oz, figureViz)
+      dotPositions[i * 3] = s.x
+      dotPositions[i * 3 + 1] = s.y
+      dotPositions[i * 3 + 2] = s.z
+      dotColors[i * 3] = s.r
+      dotColors[i * 3 + 1] = s.g
+      dotColors[i * 3 + 2] = s.b
+      dotIntensities[i] = s.intensity
+      dotDepths[i] = (s.z + 1) / 2
+      continue
+    }
+
+    const mx = n.x
+    const my = n.y
+    const mz = n.z
+    const bx = mx * breath
+    const by = -my * breath // Y negated to match original orientation
+    const bz = mz * breath
 
     // Dot positions and colors
     dotPositions[i * 3] = bx

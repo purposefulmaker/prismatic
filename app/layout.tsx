@@ -1,10 +1,24 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Geist, Geist_Mono, Cinzel, Cormorant_Garamond } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
+
+// Sacred typefaces for the Healing surface. Cinzel carries the ritual labels
+// and titles; Cormorant Garamond carries the guidance body (incl. italics).
+const cinzel = Cinzel({
+  subsets: ['latin'],
+  weight: ['400', '600', '700'],
+  variable: '--f-cinzel',
+})
+const cormorant = Cormorant_Garamond({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600'],
+  style: ['normal', 'italic'],
+  variable: '--f-cormorant',
+})
 
 export const metadata: Metadata = {
   title: 'The Field Perceptionist presents — The Beautiful Necessity',
@@ -20,7 +34,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${cinzel.variable} ${cormorant.variable}`}>
       <body className="font-sans antialiased">
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
