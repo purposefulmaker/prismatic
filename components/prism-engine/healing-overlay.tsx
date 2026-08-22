@@ -15,10 +15,11 @@ interface HealingOverlayProps {
 }
 
 /**
- * The Healing Mode surface. The prism field is NOT covered — the overlay is a
- * translucent scrim with the guidance text, so the living sphere behind it is
- * the actual guide. On the landing the field breathes calmly; inside a flow it
- * embodies each step and breathes in lockstep with the practitioner.
+ * The Healing Mode surface. The figure is NOT covered — the overlay is a
+ * translucent scrim holding only the guidance text, so the body of light behind
+ * it stays the actual guide. On the landing it rests and breathes calmly; inside
+ * a practice the light moves to whatever part of the body the words address and
+ * breathes in lockstep with the practitioner.
  */
 export function HealingOverlay({ setParams, healingVizRef, onClose }: HealingOverlayProps) {
   const {
@@ -73,7 +74,7 @@ export function HealingOverlay({ setParams, healingVizRef, onClose }: HealingOve
         />
       )}
 
-      {/* Hand-tuning panel for the particle figure — sits clear of the sphere
+      {/* Hand-tuning panel for the particle figure — sits clear of the body
           on the right edge and stays available in every phase. */}
       <div className="pointer-events-none fixed right-3 top-1/2 z-10 -translate-y-1/2">
         <FigureTuner
@@ -101,7 +102,7 @@ function HealingLanding({
 }) {
   return (
     <div className="pointer-events-auto relative flex h-full w-full flex-col px-4 py-5 md:px-7 md:py-6">
-      {/* Edge-only shading preserves the sphere as the unobstructed guide. */}
+      {/* Edge-only shading keeps the figure unobstructed as the guide. */}
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,transparent_48%,rgba(0,0,0,0.38)_76%,rgba(0,0,0,0.82)_100%)]" />
 
       <header className="relative flex items-start justify-between gap-4">
@@ -122,13 +123,13 @@ function HealingLanding({
         </button>
       </header>
 
-      {/* The center remains completely clear for the living prism sphere. */}
+      {/* The center remains completely clear for the figure of light. */}
       <div className="min-h-0 flex-1" aria-hidden="true" />
 
       <section className="relative mx-auto w-full max-w-4xl border border-white/10 bg-black/90 p-3 shadow-[0_12px_48px_rgba(0,0,0,0.75)] backdrop-blur-xl md:p-4">
         <div className="mb-3 flex items-end justify-between gap-4">
           <p className="font-cormorant text-base italic text-white/60">
-            Choose a practice. The sphere will guide the field.
+            Choose a practice. The light will show you where to go.
           </p>
           <span className="hidden font-mono text-[8px] uppercase tracking-[0.3em] text-white/35 md:block">
             Four guided flows
@@ -202,7 +203,7 @@ function HealingSession({
 
   return (
     <div className="pointer-events-auto flex h-full w-full flex-col px-4 py-5 md:px-7 md:py-6">
-      {/* Sparse top rail; the middle of the viewport belongs to the sphere. */}
+      {/* Sparse top rail; the middle of the viewport belongs to the figure. */}
       <div className="flex items-center justify-between gap-4">
         <button
           onClick={onBack}
@@ -229,7 +230,7 @@ function HealingSession({
 
       <div className="min-h-0 flex-1" aria-hidden="true" />
 
-      {/* Compact guidance rail: never reaches into the sphere's center. */}
+      {/* Compact guidance rail: never reaches into the figure's space. */}
       <section className="mx-auto w-full max-w-4xl border border-white/10 bg-black/90 p-4 shadow-[0_12px_48px_rgba(0,0,0,0.8)] backdrop-blur-xl md:p-5">
         <div className="grid items-end gap-4 md:grid-cols-[minmax(0,1fr)_15rem]">
           <div>

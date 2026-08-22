@@ -56,14 +56,14 @@ export const PRACTICE_META: PracticeMeta[] = [
     mode: 'turtle',
     numeral: 'II',
     title: 'The Turtle Shell',
-    desc: 'Active withdrawal. Pull your receptors inside. Roots down into earth, shell forms around you. Use when something is incoming.',
+    desc: 'Active withdrawal. Draw your senses inward. Roots down into earth, shell forms around you. Use when something is incoming.',
     time: '~3 minutes',
   },
   {
     mode: 'layered',
     numeral: 'III',
     title: 'Layered Defense',
-    desc: 'Full architecture. Egg outside, shell inside, roots below, Christ-light above. Defense in depth. Use before spiritual work.',
+    desc: 'All layers at once. Egg outside, shell inside, roots below, Christ-light above. Use before spiritual work.',
     time: '~5 minutes',
   },
   {
@@ -124,7 +124,7 @@ export const PRACTICES: Record<HealingMode, HealingStep[]> = {
       visual: 'egg-mirror',
     },
     {
-      label: 'Set Permeability',
+      label: 'Set What Passes',
       main: 'Now set the intention: this membrane passes love, truth, and what serves your highest good. Everything else reflects.',
       detail: 'Say this aloud:',
       speak: '"Only what is ordained by the Father passes through. I receive love. I give love. All else returns to source."',
@@ -135,7 +135,7 @@ export const PRACTICES: Record<HealingMode, HealingStep[]> = {
     {
       label: 'Seal',
       main: 'Take one deep breath. On the exhale, feel the egg solidify — not rigid, but alive. It breathes with you. It goes where you go.',
-      detail: 'Open your eyes when ready. Your shield is active.',
+      detail: 'Open your eyes when ready. The shield is set.',
       speak: '',
       breath: 1,
       duration: 0,
@@ -144,7 +144,7 @@ export const PRACTICES: Record<HealingMode, HealingStep[]> = {
     {
       label: 'Complete',
       main: 'The Egg is set. It will hold for 8–12 hours in a peaceful environment. Refresh after stressful interactions or crowded spaces.',
-      detail: 'This is your daily default. Every morning before you engage with the world.',
+      detail: 'This is your daily practice. Every morning before you engage with the world.',
       speak: '',
       breath: 0,
       duration: 0,
@@ -192,7 +192,7 @@ export const PRACTICES: Record<HealingMode, HealingStep[]> = {
     {
       label: 'Withdraw',
       main: 'Pull your awareness inside. Your eyes close inward. Your hearing softens. Your sensing — all of it — comes home to the center of your chest.',
-      detail: 'You are not shutting down. You are choosing not to receive. The passive radar goes quiet. You are safe inside.',
+      detail: 'You are not shutting down. You are choosing not to receive. Your senses come to rest. You are safe inside.',
       speak: '',
       breath: 0,
       duration: 14000,
@@ -202,7 +202,7 @@ export const PRACTICES: Record<HealingMode, HealingStep[]> = {
       label: 'Declare',
       main: 'Say this — once, from inside the shell:',
       detail: 'This is not defense. This is sovereignty. You choose what enters.',
-      speak: '"I withdraw my receptors. I am unavailable to any signal I did not invite. I am home in my own body."',
+      speak: '"I withdraw my senses. I am unavailable to anything I did not invite. I am home in my own body."',
       breath: 0,
       duration: 14000,
       visual: 'declare',
@@ -231,7 +231,7 @@ export const PRACTICES: Record<HealingMode, HealingStep[]> = {
     {
       label: 'Ground',
       main: 'Stand if you can. Feet on the floor. Arms at your sides. Close your eyes.',
-      detail: 'You are about to build a full protection architecture. Three layers. Heaven to earth.',
+      detail: 'You are about to build all three layers. Heaven to earth.',
       speak: '',
       breath: 0,
       duration: 8000,
@@ -267,7 +267,7 @@ export const PRACTICES: Record<HealingMode, HealingStep[]> = {
     {
       label: 'Layer 2 — The Shell',
       main: 'Now grow the shell. Bone and earth rising around your torso, your back, curving over. Hexagonal plates interlocking.',
-      detail: 'This is your inner sanctum. The close protection. Nothing uninvited touches your body or psyche.',
+      detail: 'This is your inner sanctum — the layer closest to you. Nothing uninvited touches your body or psyche.',
       speak: '',
       breath: 0,
       duration: 13000,
@@ -285,7 +285,7 @@ export const PRACTICES: Record<HealingMode, HealingStep[]> = {
     {
       label: 'Crown — Christ Light',
       main: 'Now from above — a beam of pure white-gold light enters through the crown of your head. It fills the space between shell and egg. It fills you.',
-      detail: 'This is the pneumatic layer. The Spirit of God. It does not need protection because it cannot be attacked.',
+      detail: 'This is the layer of Spirit — the breath of God. It does not need protection because it cannot be attacked.',
       speak: '"Greater is He that is in me than he that is in the world."',
       breath: 0,
       duration: 14000,
@@ -294,7 +294,7 @@ export const PRACTICES: Record<HealingMode, HealingStep[]> = {
     {
       label: 'Seal All Layers',
       main: 'One breath. On the exhale, all three layers lock. Roots grip. Shell hardens. Egg seals. Crown light holds.',
-      detail: 'You are defended in depth. Enterprise-grade.',
+      detail: 'All four hold together. Nothing is left open.',
       speak: '"I am rooted, shielded, sealed, and filled. In Jesus\' name. Amen."',
       breath: 1,
       duration: 0,
@@ -302,8 +302,8 @@ export const PRACTICES: Record<HealingMode, HealingStep[]> = {
     },
     {
       label: 'Complete',
-      main: 'Full architecture active. Use this before any spiritual work, before sessions, before entering any space where you will be open or receptive.',
-      detail: 'Defense in depth. No single point of failure.',
+      main: 'All layers are holding. Use this before any spiritual work, before sessions, before entering any space where you will be open or receptive.',
+      detail: 'Layer upon layer. If one softens, the others still hold.',
       speak: '',
       breath: 0,
       duration: 0,
@@ -377,8 +377,8 @@ export const PRACTICES: Record<HealingMode, HealingStep[]> = {
     },
     {
       label: 'Seal the Void',
-      main: 'THIS IS CRITICAL. Where each cord was, there is now an empty socket. Fill it immediately with Christ-light. Golden-white. Pure.',
-      detail: 'Never leave a void. An empty socket will refill with the first thing that comes along.',
+      main: 'THIS IS CRITICAL. Where each cord was, there is now a hollow place. Fill it immediately with Christ-light. Golden-white. Pure.',
+      detail: 'Never leave a void. A hollow left open will fill with the first thing that comes along.',
       speak: '"I fill this space with the light of the Holy Spirit. No cord re-attaches here without my sovereign consent."',
       breath: 0,
       duration: 16000,
