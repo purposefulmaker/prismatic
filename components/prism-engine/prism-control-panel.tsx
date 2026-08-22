@@ -1,5 +1,6 @@
 'use client'
 
+import { useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import type {
   BeamPattern,
@@ -452,44 +453,121 @@ export function PrismControlPanel({
     { name: 'off', label: 'OFF' },
   ]
 
+  // ─── Swipe-down-to-dismiss (mobile bottom sheet) ───
+  // Drag the grab handle downward to drop the sheet away. Past 25% of its
+  // height (or on a fast flick) it closes; otherwise it springs back.
+  const dragStartY = useRef<number | null>(null)
+  const [dragY, setDragY] = useState(0)
+  const [dragging, setDragging] = useState(false)
+
+  const onDragStart = (clientY: number) => {
+    dragStartY.current = clientY
+    setDragging(true)
+  }
+  const onDragMove = (clientY: number) => {
+    if (dragStartY.current === null) return
+    // Only track downward movement — never let the sheet be dragged upward.
+    setDragY(Math.max(0, clientY - dragStartY.current))
+  }
+  const onDragEnd = () => {
+    if (dragStartY.current === null) return
+    const sheetH = typeof window !== 'undefined' ? window.innerHeight * 0.8 : 600
+    if (dragY > sheetH * 0.25) onToggle()
+    dragStartY.current = null
+    setDragY(0)
+    setDragging(false)
+  }
+
   return (
     <>
-      {/* Toggle Button - positioned differently on mobile */}
+      {/* Toggle Button. On mobile this is the OPEN affordance only — once the
+          sheet is up it would float over the sheet's own content (and sit under
+          the phone's home indicator), so it hides and the sheet header takes
+          over closing. On desktop it stays as the edge tab in both states. */}
       <button
         onClick={onToggle}
+        aria-label={isOpen ? 'Close controls' : 'Open controls'}
+        aria-expanded={isOpen}
         className={cn(
           'fixed z-[101]',
           'bg-white/5 border border-white/8 cursor-pointer',
-          'flex items-center justify-center text-white/60',
+          'items-center justify-center text-white/60',
           'hover:bg-white/10 transition-all',
           // Desktop: right edge, vertical
           'md:top-1/2 md:-translate-y-1/2 md:w-5 md:h-[50px] md:border-r-0 md:rounded-l-sm md:text-[10px]',
           isOpen ? 'md:right-[300px]' : 'md:right-0',
-          // Mobile: bottom center, horizontal pill
-          'bottom-4 left-1/2 -translate-x-1/2 md:bottom-auto md:left-auto md:translate-x-0',
+          // Mobile: bottom center pill, lifted clear of the home indicator
+          'left-1/2 -translate-x-1/2 md:bottom-auto md:left-auto md:translate-x-0',
+          'bottom-[calc(1rem+env(safe-area-inset-bottom))] md:bottom-auto',
           'w-16 h-10 rounded-full text-xs md:w-5 md:h-[50px] md:rounded-l-sm md:rounded-r-none',
-          'border-b md:border-b'
+          'border-b md:border-b',
+          isOpen ? 'hidden md:flex' : 'flex'
         )}
       >
-        <span className="md:hidden">{isOpen ? 'CLOSE' : 'CTRL'}</span>
+        <span className="md:hidden">CTRL</span>
         <span className="hidden md:inline">{isOpen ? '▶' : '◀'}</span>
       </button>
 
-      {/* Panel - full screen slide-up on mobile, right sidebar on desktop */}
+      {/* Mobile backdrop — tapping the field above the sheet drops it away */}
+      {isOpen && (
+        <button
+          type="button"
+          aria-label="Close controls"
+          onClick={onToggle}
+          className="fixed inset-0 z-[99] bg-black/40 md:hidden"
+        />
+      )}
+
+      {/* Panel - slide-up sheet on mobile, right sidebar on desktop.
+          Mobile uses `dvh` (dynamic viewport height) rather than `vh`: on phones
+          `vh` measures the tallest viewport (URL bar retracted), so a `vh` sheet
+          extends below the visible area and its controls end up unreachable
+          behind the browser chrome. */}
       <div
         className={cn(
-          'fixed z-[100] bg-black/94 border-white/8 overflow-y-auto',
-          'scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent',
-          'font-mono text-[#ddd] select-none transition-transform duration-300',
+          'fixed z-[100] bg-black/94 border-white/8 flex flex-col',
+          'font-mono text-[#ddd] select-none',
+          !dragging && 'transition-transform duration-300',
           // Desktop: right sidebar (clear the mobile left:0 from inset-x-0)
-          'md:left-auto md:right-0 md:top-0 md:w-[300px] md:h-screen md:border-l md:p-3.5',
+          'md:left-auto md:right-0 md:top-0 md:w-[300px] md:h-screen md:border-l',
           !isOpen && 'md:translate-x-full',
-          // Mobile: bottom sheet (80% height)
-          'inset-x-0 bottom-0 h-[80vh] md:h-screen rounded-t-2xl md:rounded-none border-t md:border-t-0 p-4 md:p-3.5',
+          // Mobile: bottom sheet
+          'inset-x-0 bottom-0 h-[80dvh] md:h-screen rounded-t-2xl md:rounded-none border-t md:border-t-0',
           !isOpen && 'translate-y-full md:translate-y-0',
           className
         )}
+        style={dragY > 0 ? { transform: `translateY(${dragY}px)` } : undefined}
       >
+        {/* Grab handle + close row (mobile only). Dragging this down drops the
+            sheet away; the X closes it outright. */}
+        <div
+          className="shrink-0 md:hidden touch-none"
+          onPointerDown={e => onDragStart(e.clientY)}
+          onPointerMove={e => dragging && onDragMove(e.clientY)}
+          onPointerUp={onDragEnd}
+          onPointerCancel={onDragEnd}
+        >
+          <div className="relative flex items-center justify-center pt-3 pb-2">
+            <span className="h-1 w-10 rounded-full bg-white/25" aria-hidden="true" />
+            <button
+              onClick={onToggle}
+              aria-label="Close controls"
+              className="absolute right-3 top-1.5 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-white/60 hover:bg-white/10"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* Scrolling body. Bottom padding clears the home indicator so the last
+            control is never trapped under the phone's gesture bar. */}
+        <div
+          className={cn(
+            'min-h-0 flex-1 overflow-y-auto overscroll-contain',
+            'scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent',
+            'px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:p-3.5'
+          )}
+        >
         {/* Header */}
         <div
           className="text-xs tracking-[4px] text-center mb-1 font-bold"
@@ -1218,6 +1296,7 @@ export function PrismControlPanel({
             ))}
           </ButtonGroup>
         </Section>
+        </div>
       </div>
     </>
   )
