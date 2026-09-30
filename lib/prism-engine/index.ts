@@ -33,6 +33,7 @@ export { resolveNodeColor, hexToRGB, rgbToHex } from './color'
 // Lattice / Volumetric Shells
 export {
   createVolumetricShells,
+  VOLUMETRIC_NODE_BUDGET,
   rotateVolumetricNodes,
   applyLightProjection,
   evaluateShapeSDF,

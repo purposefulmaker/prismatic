@@ -10,6 +10,7 @@ import {
   resolveNodeColor,
   DEFAULT_NODE_COUNT,
   createVolumetricShells,
+  VOLUMETRIC_NODE_BUDGET,
   createThreeScene,
   updateViewport,
   renderThreeFrame,
@@ -24,6 +25,10 @@ import {
   isNodeInPlanarShape,
   isNodeInSpotlightShape,
 } from '@/lib/prism-engine/shape-mask'
+
+// GPU buffer headroom over the base node count. Must be >= VOLUMETRIC_NODE_BUDGET
+// so the lattice can never outgrow the dot/beam buffers.
+const DOT_CAPACITY_FACTOR = 4
 
 export interface UseThreeEngineOptions {
   nodeCount?: number
@@ -50,6 +55,9 @@ export function useThreeEngine(
   const threeSceneRef = useRef<ThreeScene | null>(null)
   const nodesRef = useRef<PrismNode[]>([])
   const volumetricNodesRef = useRef<PrismNode[]>([])
+  // Fingerprint of the lattice fields that affect shell geometry; shells are
+  // only resampled when this changes.
+  const latticeKeyRef = useRef<string>('')
   const stateRef = useRef<EngineState>({
     ax: 0,
     ay: 0,
@@ -107,13 +115,24 @@ export function useThreeEngine(
       }
     }
 
-    // Rebuild volumetric shells when lattice params change
-    if (params.lattice?.enabled && nodesRef.current.length > 0) {
-      volumetricNodesRef.current = createVolumetricShells(nodesRef.current, params.lattice)
-    } else {
-      volumetricNodesRef.current = []
+    // Rebuild volumetric shells ONLY when a field that changes their geometry
+    // changes. This effect fires on every param edit (any slider tick), and a
+    // full SDF resample per tick is what stalled the frame in lattice mode.
+    const L = params.lattice
+    const latticeKey = L?.enabled ? `${L.shape}|${L.shells}|${L.collapse}` : ''
+    if (latticeKey !== latticeKeyRef.current) {
+      latticeKeyRef.current = latticeKey
+      if (L?.enabled && nodesRef.current.length > 0) {
+        volumetricNodesRef.current = createVolumetricShells(
+          nodesRef.current,
+          L,
+          Math.min(nodesRef.current.length * VOLUMETRIC_NODE_BUDGET, nodeCount * DOT_CAPACITY_FACTOR)
+        )
+      } else {
+        volumetricNodesRef.current = []
+      }
     }
-  }, [params])
+  }, [params, nodeCount])
 
   // Handle viewport updates when panel visibility changes. This is the ONLY
   // effect that reacts to panelHidden — it just nudges the camera/viewport,
@@ -141,8 +160,8 @@ export function useThreeEngine(
     textCanvas.height = 128
     textCanvasRef.current = textCanvas
 
-    // Create Three.js scene
-    threeSceneRef.current = createThreeScene(canvas, nodeCount * 8) // Extra capacity for volumetric
+    // Create Three.js scene with headroom for the volumetric lattice
+    threeSceneRef.current = createThreeScene(canvas, nodeCount * DOT_CAPACITY_FACTOR)
 
     // Create Fibonacci sphere nodes
     const nodes = createFibonacciSphere(nodeCount)
@@ -291,9 +310,12 @@ export function useThreeEngine(
               node.intensity = inText ? 0.95 : 0.16
             }
           } else {
-            node.intensity = 0.5 + node.z * 0.3
+            // No glyph: white light from behind, so the camera-facing front of
+            // the shell catches it and the back stays dim. Kept well under the
+            // beam threshold so the shells read as layered dots, not a wall.
+            node.intensity = 0.12 + Math.max(0, node.z) * 0.4
           }
-          if (node.intensity > 0.1) beamCount++
+          if (node.intensity > 0.9) beamCount++
         } else if (isSpotlight) {
           // SPOTLIGHT: glyph lives on the front hemisphere (post-rotation z),
           // planar-projected so it always faces the camera. POV persistence
