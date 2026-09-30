@@ -771,8 +771,19 @@ export function renderThreeFrame(
 
   let beamIndex = 0
 
+  // The dot/beam buffers are sized for the volumetric maximum. Only ever
+  // write (and draw) as many nodes as fit — anything beyond the capacity is
+  // dropped rather than silently written past the typed-array bounds.
+  const dotCapacity = dotIntensities.length
+  const drawCount = Math.min(nodes.length, dotCapacity)
+
+  // Lattice mode multiplies the node count and gives every node a floor
+  // intensity, so beams are reserved for glyph-lit nodes (intensity ~1) or
+  // the frame drowns in thousands of additive line segments.
+  const beamThreshold = params.lattice?.enabled ? 0.9 : 0.05
+
   // Update dot and beam buffers
-  for (let i = 0; i < nodes.length; i++) {
+  for (let i = 0; i < drawCount; i++) {
     const n = nodes[i]
 
     if (figureViz) {
@@ -809,7 +820,7 @@ export function renderThreeFrame(
     dotDepths[i] = (n.z + 1) / 2
 
     // Beam from prism center to lit dots
-    if (n.intensity > 0.05 && n.z > -0.35) {
+    if (n.intensity > beamThreshold && n.z > -0.35) {
       const depth = (n.z + 1) / 2
       // In lattice mode the beams ARE the lattice's connective edges, so the
       // Edge Width / Edge Opacity controls modulate them here (WebGL can't vary
@@ -844,6 +855,11 @@ export function renderThreeFrame(
       beamIndex++
     }
   }
+
+  // Draw ONLY the live nodes. Without this the whole capacity buffer renders
+  // every frame, so stale lattice points linger frozen on screen after the
+  // node set shrinks (lattice off) and the GPU pays for thousands of dead dots.
+  dotGeometry.setDrawRange(0, drawCount)
 
   // Mark buffers for update
   dotGeometry.attributes.position.needsUpdate = true

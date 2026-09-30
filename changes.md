@@ -1,3 +1,25 @@
+# Lattice mode — the frame no longer freezes
+
+Lattice ON used to drop the frame to a crawl and leave a frozen ghost of the shells on screen after Lattice OFF. Three compounding causes, all in the CPU/FractalDot path; no parameters added, nothing changes outside lattice mode.
+
+## What was wrong
+
+1. **The dot buffer was never draw-ranged.** `renderThreeFrame` wrote the live nodes into a buffer sized for the volumetric maximum but drew the whole buffer every frame. After lattice filled ~8,800 slots, turning it off left ~7,200 stale points rendering — frozen in place, still paid for on the GPU every frame. Even the plain sphere was drawing ~11,000 dead zero-points at the origin.
+2. **Every lattice node grew a beam.** The lattice floor intensity (0.16) cleared the 0.05 beam threshold, so ~8,800 additive line segments hit the center each frame.
+3. **Shells were resampled on every param edit.** The rebuild effect keyed on the whole `params` object, so any slider tick re-ran the full SDF sampling — with `Math.random()` inside, so the field also shimmered on each rebuild. No total-node budget: 16 shells × 1,600 nodes × r² ≈ 8,800 nodes.
+
+## Where it lives
+
+- `lib/prism-engine/three-renderer.ts` — `dotGeometry.setDrawRange(0, drawCount)` with `drawCount` clamped to buffer capacity; beam threshold is `0.9` in lattice mode (glyph-lit nodes only), `0.05` otherwise.
+- `lib/prism-engine/lattice.ts` — `VOLUMETRIC_NODE_BUDGET = 3` and a `maxNodes` argument; per-shell counts are the budget distributed by r² so the TOTAL is bounded regardless of shell count. Single-shell `0/0 = NaN` guarded. Per-node jitter is a golden-ratio hash of the index instead of `Math.random()`.
+- `hooks/use-three-engine.ts` — shells rebuild only when the `shape|shells|collapse` fingerprint changes; `DOT_CAPACITY_FACTOR = 4` sizes the GPU buffers and caps the budget. No-glyph lattice intensity is now depth-lit (`0.12 + max(0, z) · 0.4`) so the shells read as layered dots rather than a white wall.
+
+## Measured (headless software GL, 1,600 base nodes)
+
+- Lattice ON: 8,821 nodes / 8,821 beams / 2–3 FPS → 4,804 nodes / 0 beams / 7 FPS (baseline 16–17 FPS on the same renderer; a real GPU is fill-rate bound far less).
+- Lattice OFF after ON: stale 3 FPS with ghost lattice → clean return to 1,600 nodes and the normal DFT sweep.
+
+
 # Bidirectional flux — the conjugate pair
 
 One new parameter, `counter: boolean`, wired through both render tiers. Off by default; nothing changes until the toggle is on.

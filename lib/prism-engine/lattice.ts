@@ -101,9 +101,17 @@ export function evaluateShapeSDF(
  * Create volumetric shell nodes
  * Multiple concentric Fibonacci spheres at decreasing radii
  */
+/**
+ * Total volumetric node budget as a multiple of the base sphere count. The
+ * CPU loop and the additive-blended GPU pass both scale linearly with this,
+ * so it is the single knob that keeps lattice mode at interactive frame rates.
+ */
+export const VOLUMETRIC_NODE_BUDGET = 3
+
 export function createVolumetricShells(
   baseNodes: PrismNode[],
-  params: LatticeParameters
+  params: LatticeParameters,
+  maxNodes: number = baseNodes.length * VOLUMETRIC_NODE_BUDGET
 ): PrismNode[] {
   if (!params.enabled) return baseNodes
 
@@ -114,15 +122,26 @@ export function createVolumetricShells(
   const lightZ = -2.0
   const lightIntensity = 1.0
 
+  // Shell radii, outermost first. Guard the single-shell case: with one
+  // shell `shellIdx / (shells - 1)` is 0/0 = NaN and every node vanishes.
+  const radii: number[] = []
   for (let shellIdx = 0; shellIdx < shells; shellIdx++) {
-    // Radius decreases from 1.0 to a small core
-    // Use sqrt for more even distribution of volume
-    const shellProgress = shellIdx / (shells - 1)
-    const radius = 1.0 - (shellProgress * (1.0 - params.collapse * 0.8))
+    const shellProgress = shells === 1 ? 0 : shellIdx / (shells - 1)
+    radii.push(1.0 - shellProgress * (1.0 - params.collapse * 0.8))
+  }
 
-    // Fewer nodes on inner shells (proportional to surface area)
-    const nodeRatio = radius * radius
-    const shellNodeCount = Math.max(8, Math.floor(baseNodes.length * nodeRatio))
+  // Distribute the node budget across shells proportional to surface area
+  // (r^2) so inner shells stay sparser, but the TOTAL never exceeds maxNodes
+  // regardless of how many shells are requested.
+  const areaSum = radii.reduce((sum, r) => sum + r * r, 0)
+  const budget = Math.max(shells * 8, Math.min(maxNodes, baseNodes.length * shells))
+
+  for (let shellIdx = 0; shellIdx < shells; shellIdx++) {
+    const radius = radii[shellIdx]
+    const shellProgress = shells === 1 ? 0 : shellIdx / (shells - 1)
+
+    const nodeRatio = (radius * radius) / areaSum
+    const shellNodeCount = Math.max(8, Math.floor(budget * nodeRatio))
 
     // Sample nodes for this shell using golden angle
     for (let i = 0; i < shellNodeCount; i++) {
@@ -171,7 +190,9 @@ export function createVolumetricShells(
         x,
         y,
         z,
-        intensity: attenuation * surfaceBoost * (0.3 + Math.random() * 0.2),
+        // Deterministic per-node jitter (golden-ratio hash) so rebuilding the
+        // shells never re-rolls the field and makes the lattice shimmer.
+        intensity: attenuation * surfaceBoost * (0.3 + ((i * GOLDEN_RATIO) % 1) * 0.2),
         wavelength,
         r: 1,
         g: 1,
