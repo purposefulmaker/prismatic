@@ -168,7 +168,9 @@ export const PRESETS: PrismPreset[] = [
       bc: 110,
       bw: 0.9,
       bo: 0.28,
-      pattern: 'dft',
+      // 'all' keeps every node on the two triangles lit so the form holds
+      // on the sphere instead of flashing once per DFT sweep.
+      pattern: 'all',
       harmK: 3,
       phaseV: 0.5,
       dr: 3.2,

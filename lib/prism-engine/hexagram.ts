@@ -1,10 +1,12 @@
 // ═══════════════════════════════════════════════════════════════
-// NOTHINGBURGER ENGINE — Hexagram geometry
-// The triangle meeting the inverted triangle, as a planar glyph on the
-// sphere's camera-facing face. Pure geometry: no rendering, no DOM.
+// NOTHINGBURGER ENGINE — Two-triangle geometry
+// An upright triangle sitting on an inverted triangle, meeting base to
+// base on a shared horizontal line: a diamond split through its middle.
+// Planar glyph on the sphere's camera-facing face. Pure geometry: no
+// rendering, no DOM.
 // ═══════════════════════════════════════════════════════════════
 
-/** Circumradius of each triangle in unit-sphere node space (ox, oy). */
+/** Half-height of the full diamond (apex to center) in unit-sphere node space. */
 export const HEXAGRAM_RADIUS = 0.84
 
 /** Half-width of the lit edge band in node space (~0.6 of mean node spacing). */
@@ -13,21 +15,25 @@ export const HEXAGRAM_BAND = 0.055
 type Vec2 = readonly [number, number]
 type Edge = readonly [Vec2, Vec2]
 
-function triangle(startDeg: number, r: number): Edge[] {
-  const pts: Vec2[] = [0, 1, 2].map(k => {
-    const a = ((startDeg + k * 120) * Math.PI) / 180
-    return [Math.cos(a) * r, Math.sin(a) * r] as const
-  })
+/**
+ * Five edges: the shared baseline through the center, the two sides of
+ * the upright triangle to the +Y apex, and the two sides of the inverted
+ * triangle to the −Y apex. Each triangle is equilateral, so the half-base
+ * is h / √3 for apex height h.
+ */
+export function hexagramEdges(h: number = HEXAGRAM_RADIUS): Edge[] {
+  const half = h / Math.sqrt(3)
+  const top: Vec2 = [0, h]
+  const bottom: Vec2 = [0, -h]
+  const left: Vec2 = [-half, 0]
+  const right: Vec2 = [half, 0]
   return [
-    [pts[0], pts[1]],
-    [pts[1], pts[2]],
-    [pts[2], pts[0]],
+    [left, right],
+    [left, top],
+    [right, top],
+    [left, bottom],
+    [right, bottom],
   ]
-}
-
-/** Six edges: upright triangle (apex at +Y) then inverted (apex at −Y). */
-export function hexagramEdges(r: number = HEXAGRAM_RADIUS): Edge[] {
-  return [...triangle(90, r), ...triangle(270, r)]
 }
 
 const UNIT_EDGES = hexagramEdges(1)
