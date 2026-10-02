@@ -24,7 +24,7 @@ import {
   isNodeInShape,
   isNodeInPlanarShape,
   isNodeInSpotlightShape,
-  isNodeInHexagram,
+  isNodeInTwinTriangle,
 } from '@/lib/prism-engine/shape-mask'
 
 // GPU buffer headroom over the base node count. Must be >= VOLUMETRIC_NODE_BUDGET
@@ -116,7 +116,7 @@ export function useThreeEngine(
         params.shapeTxt,
         textCanvasRef.current,
         ctx,
-        params.hexagram
+        params.twinTriangle
       )
       }
     }
@@ -180,7 +180,7 @@ export function useThreeEngine(
         paramsRef.current.shapeTxt,
         textCanvas,
         textCtx,
-        paramsRef.current.hexagram
+        paramsRef.current.twinTriangle
       )
     }
 
@@ -341,13 +341,13 @@ export function useThreeEngine(
           if (input > 0) beamCount++
         } else {
           // Standard mode: beam pattern and shape mask. The shape is the
-          // union of the text glyph (wrapped on the sphere) and the hexagram
-          // (planar on the +Z face); with neither, the whole sphere is lit.
+          // union of the text glyph (wrapped on the sphere) and the twin
+          // triangle (planar on the +Z face); with neither, the whole sphere is lit.
           const bp = calculateBeamPattern(node, P.pattern, state.t, P, nodeCount)
           let inShape: boolean
-          if (P.hexagram) {
+          if (P.twinTriangle) {
             inShape =
-              isNodeInHexagram(node, P.shapeScale) ||
+              isNodeInTwinTriangle(node, P.shapeScale) ||
               (!!P.shapeTxt && isNodeInShape(node, shapeMaskRef.current, P.shapeScale))
           } else {
             inShape = isNodeInShape(node, shapeMaskRef.current, P.shapeScale)

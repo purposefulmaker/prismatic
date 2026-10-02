@@ -138,9 +138,9 @@ export interface PrismParameters {
   chamber: boolean
   // PUMP: Vortex weave — 6+6 counter-rotating strands, flow as light
   pump: boolean
-  // HEXAGRAM: the triangle meeting the inverted triangle, drawn on the
-  // camera-facing great circle of the sphere; tilts with the field on drag
-  hexagram: boolean
+  // TWIN TRIANGLE: upright triangle on an inverted one, base to base, drawn
+  // on the camera-facing face of the sphere; tilts with the field on drag
+  twinTriangle: boolean
   // Rotating rainbow ring around the white prism core (off = white glow only)
   prismRing: boolean
   // THE LAWS of The Beautiful Necessity — see lib/prism-engine/laws.ts

@@ -31,7 +31,12 @@ export { createShapeMask, isNodeInShape } from './shape-mask'
 export { resolveNodeColor, hexToRGB, rgbToHex } from './color'
 
 // Lattice / Volumetric Shells
-export { HEXAGRAM_RADIUS, HEXAGRAM_BAND, hexagramEdges, hexagramEdgeDistance } from './hexagram'
+export {
+  TWIN_TRIANGLE_HEIGHT,
+  TWIN_TRIANGLE_BAND,
+  twinTriangleEdges,
+  twinTriangleEdgeDistance,
+} from './twin-triangle'
 
 export {
   createVolumetricShells,

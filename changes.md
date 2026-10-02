@@ -1,4 +1,4 @@
-# Default scene — white core, still sphere, the hexagram
+# Default scene — white core, still sphere, the twin triangle
 
 Three default-state changes, all in the FractalDot (CPU) path. Nothing new is forced on; every piece has a toggle.
 
@@ -6,12 +6,12 @@ Three default-state changes, all in the FractalDot (CPU) path. Nothing new is fo
 
 - **Prism core is white glow only.** The rotating rainbow ring around the core is now behind `prismRing` (default OFF; toggle under Prism Intensity as "Spectrum ring"). Implemented as a draw range on the prism `Points` — index 0 is the core, the ring follows — so no shader change. Core is slightly larger (size 11) and whiter.
 - **No sphere rotation by default.** `ry` 0.18 → 0 in `DEFAULT_PARAMETERS` and the GENESIS preset. The DFT sweep, breath, and POV persistence still animate; the RPM readout is 0 at rest. Drag still spins.
-- **Hexagram drawn in the sphere.** `lib/prism-engine/hexagram.ts` — the triangle meeting the inverted triangle, both inscribed in the z = 0 great circle (unit radius, same as the nodes). Rendered as 6 additive line edges with the beam shader (`starLines` on the ThreeScene), warm white, breathing with the field, brighter on the camera-near edges. The hook rotates the 12 endpoints with the same Rodrigues angles as the nodes each frame (no per-frame allocation — one reused `Float32Array`), so at rest it is the flat glyph and under drag it tilts through the field as a plane. Hidden when Chamber, Pump, or the Healing figure is on. Toggle: "Hexagram (△ meets ▽)" in Rodrigues Rotation, param `hexagram` (default ON).
+- **Twin triangle formed by the sphere.** `lib/prism-engine/twin-triangle.ts` — an upright equilateral triangle on an inverted one, meeting base to base on a shared horizontal baseline (a diamond split through its middle). Five edges, apex height 0.84 in node space. It is a POV **shape**, like `shapeTxt`, not an overlay: `isNodeInTwinTriangle` tests each node's original (ox, oy) against the edge band on the +Z face, and the result gates the beam pattern and runs through τ persistence exactly like glyph text. The same five edges are stroked into the 256×128 bitmap mask so V0 PRISM/GPU mode reads it from `uMask`. The FractalDot preset uses `pattern: 'all'` so the form holds lit instead of flashing once per DFT sweep. Toggle: "Twin Triangle (△ over ▽)" in Rodrigues Rotation, param `twinTriangle` (default ON).
 - **Framing widened**: `targetPx` 0.33 → 0.39 of the short viewport side.
 
 ## Decision note
 
-A full 3D star tetrahedron (Merkaba) was tried first. From the camera its inner edges to the front/back vertices cut across both triangles and perspective skews the near one, so the glyph did not read as "triangle meeting upside-down triangle". The flat hexagram on the great circle does, and still turns in 3D with the sphere.
+Two earlier attempts were discarded. A 3D star tetrahedron (Merkaba): its inner edges cut across both triangles from the camera and perspective skews the near one. Then a flat line overlay: it floated over the sphere instead of being part of it. The shape-mask approach is what was asked for — the sphere's own nodes form the glyph, lit by beams from the core.
 
 
 # Lattice mode — the frame no longer freezes

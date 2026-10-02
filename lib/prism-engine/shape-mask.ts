@@ -4,10 +4,15 @@
 // ═══════════════════════════════════════════════════════════════
 
 import type { PrismNode } from './types'
-import { HEXAGRAM_BAND, HEXAGRAM_RADIUS, hexagramEdgeDistance, hexagramEdges } from './hexagram'
+import {
+  TWIN_TRIANGLE_BAND,
+  TWIN_TRIANGLE_HEIGHT,
+  twinTriangleEdgeDistance,
+  twinTriangleEdges,
+} from './twin-triangle'
 
 /**
- * Generate the 256×128 shape mask: optional text, optional hexagram, both
+ * Generate the 256×128 shape mask: optional text, optional twin triangle, both
  * composed into one bitmap so every consumer (CPU wrap, planar, GPU texture)
  * sees the same shape. Returns null when there is nothing to draw.
  */
@@ -15,9 +20,9 @@ export function createShapeMask(
   text: string,
   canvas: HTMLCanvasElement,
   ctx: CanvasRenderingContext2D,
-  hexagram: boolean = false
+  twinTriangle: boolean = false
 ): Uint8ClampedArray | null {
-  if (!text && !hexagram) return null
+  if (!text && !twinTriangle) return null
 
   canvas.width = 256
   canvas.height = 128
@@ -25,18 +30,18 @@ export function createShapeMask(
   ctx.fillStyle = '#000'
   ctx.fillRect(0, 0, 256, 128)
 
-  if (hexagram) {
+  if (twinTriangle) {
     // The GPU shader maps node XY to the mask at 92.16 px per unit on both
-    // axes (u = 0.5 + x·0.36 over 256, v = 0.5 − y·0.72 over 128), so a
-    // regular hexagram in pixels is regular on the sphere. Radius is capped
-    // so the apexes stay inside the 128px height.
+    // axes (u = 0.5 + x·0.36 over 256, v = 0.5 − y·0.72 over 128), so an
+    // equilateral pair in pixels is equilateral on the sphere. Height is
+    // capped so the apexes stay inside the 128px canvas.
     const pxPerUnit = 92.16
-    const r = Math.min(HEXAGRAM_RADIUS * pxPerUnit, 60)
+    const h = Math.min(TWIN_TRIANGLE_HEIGHT * pxPerUnit, 60)
     ctx.strokeStyle = '#fff'
-    ctx.lineWidth = Math.max(4, HEXAGRAM_BAND * 2 * pxPerUnit)
+    ctx.lineWidth = Math.max(4, TWIN_TRIANGLE_BAND * 2 * pxPerUnit)
     ctx.lineJoin = 'round'
     ctx.beginPath()
-    for (const [a, b] of hexagramEdges(r)) {
+    for (const [a, b] of twinTriangleEdges(h)) {
       // Texture Y is top-down; node +Y is up
       ctx.moveTo(128 + a[0], 64 - a[1])
       ctx.lineTo(128 + b[0], 64 - b[1])
@@ -68,19 +73,19 @@ export function createShapeMask(
 }
 
 /**
- * HEXAGRAM in the POV field: true when a node's ORIGINAL position sits on
- * one of the six edges of the star drawn on the sphere's +Z face. Uses the
- * untransformed coords so the glyph is attached to the sphere — it tilts
- * with the field under drag — and the front-face gate keeps the back
- * hemisphere from drawing a second, mirrored star behind the first.
+ * TWIN TRIANGLE in the POV field: true when a node's ORIGINAL position sits
+ * on one of the five edges of the glyph drawn on the sphere's +Z face. Uses
+ * the untransformed coords so the glyph is attached to the sphere — it
+ * tilts with the field under drag — and the front-face gate keeps the back
+ * hemisphere from drawing a second, mirrored copy behind the first.
  *
  * Analytic (distance-to-edge) rather than bitmap so the band is crisp at
  * any node count and needs no canvas.
  */
-export function isNodeInHexagram(node: PrismNode, shapeScale: number): boolean {
+export function isNodeInTwinTriangle(node: PrismNode, shapeScale: number): boolean {
   if (node.oz <= 0.05) return false
-  const r = HEXAGRAM_RADIUS * shapeScale
-  return hexagramEdgeDistance(node.ox, node.oy, r) <= HEXAGRAM_BAND
+  const h = TWIN_TRIANGLE_HEIGHT * shapeScale
+  return twinTriangleEdgeDistance(node.ox, node.oy, h) <= TWIN_TRIANGLE_BAND
 }
 
 /**

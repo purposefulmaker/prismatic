@@ -928,17 +928,17 @@ export function PrismControlPanel({
                 </button>
               </div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-[9px] text-white/50">Hexagram (△ meets ▽)</label>
+                <label className="text-[9px] text-white/50">Twin Triangle (△ over ▽)</label>
                 <button
-                  onClick={() => onParamChange('hexagram', !params.hexagram)}
+                  onClick={() => onParamChange('twinTriangle', !params.twinTriangle)}
                   className={cn(
                     'px-3 py-1 text-[8px] tracking-[1px] rounded-sm border transition-all',
-                    params.hexagram
+                    params.twinTriangle
                       ? 'bg-white/20 border-white/40 text-white'
                       : 'bg-white/4 border-white/10 text-white/40'
                   )}
                 >
-                  {params.hexagram ? 'ON' : 'OFF'}
+                  {params.twinTriangle ? 'ON' : 'OFF'}
                 </button>
               </div>
               <div className="flex items-center justify-between mb-2">
