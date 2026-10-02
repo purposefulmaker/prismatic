@@ -32,6 +32,13 @@ export { resolveNodeColor, hexToRGB, rgbToHex } from './color'
 
 // Lattice / Volumetric Shells
 export {
+  TWIN_TRIANGLE_HEIGHT,
+  TWIN_TRIANGLE_BAND,
+  twinTriangleEdges,
+  twinTriangleEdgeDistance,
+} from './twin-triangle'
+
+export {
   createVolumetricShells,
   VOLUMETRIC_NODE_BUDGET,
   rotateVolumetricNodes,

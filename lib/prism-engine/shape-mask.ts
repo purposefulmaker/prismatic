@@ -4,45 +4,88 @@
 // ═══════════════════════════════════════════════════════════════
 
 import type { PrismNode } from './types'
+import {
+  TWIN_TRIANGLE_BAND,
+  TWIN_TRIANGLE_HEIGHT,
+  twinTriangleEdgeDistance,
+  twinTriangleEdges,
+} from './twin-triangle'
 
 /**
- * Generate a bitmap mask from text for sphere projection
+ * Generate the 256×128 shape mask: optional text, optional twin triangle, both
+ * composed into one bitmap so every consumer (CPU wrap, planar, GPU texture)
+ * sees the same shape. Returns null when there is nothing to draw.
  */
 export function createShapeMask(
   text: string,
   canvas: HTMLCanvasElement,
-  ctx: CanvasRenderingContext2D
+  ctx: CanvasRenderingContext2D,
+  twinTriangle: boolean = false
 ): Uint8ClampedArray | null {
-  if (!text) return null
-
-  const txt = text
+  if (!text && !twinTriangle) return null
 
   canvas.width = 256
   canvas.height = 128
 
-  // Clear and draw text
   ctx.fillStyle = '#000'
   ctx.fillRect(0, 0, 256, 128)
-  ctx.fillStyle = '#fff'
 
-  // Fit the text to the canvas width so it stays bold and readable even
-  // for short strings like "v0". Start large, shrink until it fits.
-  let fontSize = 96
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  do {
+  if (twinTriangle) {
+    // The GPU shader maps node XY to the mask at 92.16 px per unit on both
+    // axes (u = 0.5 + x·0.36 over 256, v = 0.5 − y·0.72 over 128), so an
+    // equilateral pair in pixels is equilateral on the sphere. Height is
+    // capped so the apexes stay inside the 128px canvas.
+    const pxPerUnit = 92.16
+    const h = Math.min(TWIN_TRIANGLE_HEIGHT * pxPerUnit, 60)
+    ctx.strokeStyle = '#fff'
+    ctx.lineWidth = Math.max(4, TWIN_TRIANGLE_BAND * 2 * pxPerUnit)
+    ctx.lineJoin = 'round'
+    ctx.beginPath()
+    for (const [a, b] of twinTriangleEdges(h)) {
+      // Texture Y is top-down; node +Y is up
+      ctx.moveTo(128 + a[0], 64 - a[1])
+      ctx.lineTo(128 + b[0], 64 - b[1])
+    }
+    ctx.stroke()
+  }
+
+  if (text) {
+    ctx.fillStyle = '#fff'
+
+    // Fit the text to the canvas width so it stays bold and readable even
+    // for short strings like "v0". Start large, shrink until it fits.
+    let fontSize = 96
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    do {
+      ctx.font = `900 ${fontSize}px Arial, sans-serif`
+      const w = ctx.measureText(text).width
+      if (w <= 220) break
+      fontSize -= 4
+    } while (fontSize > 24)
+
     ctx.font = `900 ${fontSize}px Arial, sans-serif`
-    const w = ctx.measureText(txt).width
-    if (w <= 220) break
-    fontSize -= 4
-  } while (fontSize > 24)
+    ctx.fillText(text, 128, 64)
+  }
 
-  ctx.font = `900 ${fontSize}px Arial, sans-serif`
-  ctx.fillText(txt, 128, 64)
-
-  // Extract image data
   const img = ctx.getImageData(0, 0, 256, 128)
   return img.data
+}
+
+/**
+ * TWIN TRIANGLE in the POV field: true when a node's ORIGINAL position sits
+ * on one of the five edges of the glyph drawn on the sphere's +Z face. Uses
+ * the untransformed coords so the glyph is attached to the sphere — it
+ * tilts with the field under drag — and the front-face gate keeps the back
+ * hemisphere from drawing a second, mirrored copy behind the first.
+ *
+ * Analytic (distance-to-edge) rather than bitmap so the band is crisp at
+ * any node count and needs no canvas.
+ */
+export function isNodeInTwinTriangle(node: PrismNode, shapeScale: number): boolean {
+  if (node.oz <= 0.05) return false
+  const h = TWIN_TRIANGLE_HEIGHT * shapeScale
+  return twinTriangleEdgeDistance(node.ox, node.oy, h) <= TWIN_TRIANGLE_BAND
 }
 
 /**

@@ -24,6 +24,7 @@ import {
   isNodeInShape,
   isNodeInPlanarShape,
   isNodeInSpotlightShape,
+  isNodeInTwinTriangle,
 } from '@/lib/prism-engine/shape-mask'
 
 // GPU buffer headroom over the base node count. Must be >= VOLUMETRIC_NODE_BUDGET
@@ -111,7 +112,12 @@ export function useThreeEngine(
     if (textCanvasRef.current) {
       const ctx = textCanvasRef.current.getContext('2d')
       if (ctx) {
-        shapeMaskRef.current = createShapeMask(params.shapeTxt, textCanvasRef.current, ctx)
+        shapeMaskRef.current = createShapeMask(
+        params.shapeTxt,
+        textCanvasRef.current,
+        ctx,
+        params.twinTriangle
+      )
       }
     }
 
@@ -170,7 +176,12 @@ export function useThreeEngine(
     // Initialize shape mask
     const textCtx = textCanvas.getContext('2d')
     if (textCtx) {
-      shapeMaskRef.current = createShapeMask(paramsRef.current.shapeTxt, textCanvas, textCtx)
+      shapeMaskRef.current = createShapeMask(
+        paramsRef.current.shapeTxt,
+        textCanvas,
+        textCtx,
+        paramsRef.current.twinTriangle
+      )
     }
 
     // Set initial viewport
@@ -245,8 +256,8 @@ export function useThreeEngine(
         arz = 0
       } else {
         // Calculate rotation from params + drag
-        arx = (P.rx + drag.y * 0.001) * state.t
-        ary = (P.ry + drag.x * 0.001) * state.t
+        arx = P.rx * state.t + drag.y * 0.005
+        ary = P.ry * state.t + drag.x * 0.005
         arz = P.rz * state.t
       }
 
@@ -329,9 +340,18 @@ export function useThreeEngine(
           if (!inText && node.intensity < 0.07) node.intensity = 0.07
           if (input > 0) beamCount++
         } else {
-          // Standard mode: beam pattern and shape mask
+          // Standard mode: beam pattern and shape mask. The shape is the
+          // union of the text glyph (wrapped on the sphere) and the twin
+          // triangle (planar on the +Z face); with neither, the whole sphere is lit.
           const bp = calculateBeamPattern(node, P.pattern, state.t, P, nodeCount)
-          const inShape = isNodeInShape(node, shapeMaskRef.current, P.shapeScale)
+          let inShape: boolean
+          if (P.twinTriangle) {
+            inShape =
+              isNodeInTwinTriangle(node, P.shapeScale) ||
+              (!!P.shapeTxt && isNodeInShape(node, shapeMaskRef.current, P.shapeScale))
+          } else {
+            inShape = isNodeInShape(node, shapeMaskRef.current, P.shapeScale)
+          }
           // FIELD FORMS — the pump and chamber as sources in this same field:
           // the engine's own particles, colors, tau, breath, and rotation
           let src = bp && inShape ? 1.0 : 0.0

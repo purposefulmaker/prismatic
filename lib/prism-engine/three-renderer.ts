@@ -250,7 +250,7 @@ void main() {
 }
 `
 
-// ─── Three.js Scene Setup ───
+// ─── Three.js Scene Setup ─���─
 
 export interface ThreeScene {
   renderer: THREE.WebGLRenderer
@@ -468,14 +468,14 @@ export function createThreeScene(canvas: HTMLCanvasElement, nodeCount: number): 
   const prismColors = new Float32Array((PRISM_RING_COUNT + 1) * 3)
   const prismSizes = new Float32Array(PRISM_RING_COUNT + 1)
 
-  // Center point (white)
+  // Center point — the white glow. Drawn alone unless params.prismRing is on.
   prismPositions[0] = 0
   prismPositions[1] = 0
   prismPositions[2] = 0
-  prismColors[0] = 0.85
-  prismColors[1] = 0.9
+  prismColors[0] = 0.96
+  prismColors[1] = 0.97
   prismColors[2] = 1.0
-  prismSizes[0] = 8
+  prismSizes[0] = 11
 
   // Rainbow ring
   for (let i = 0; i < PRISM_RING_COUNT; i++) {
@@ -656,7 +656,7 @@ export function updateViewport(
 
   // Size the shape against the full window (min of width/height keeps it framed)
   const halfTan = Math.tan((FOV * Math.PI) / 360)
-  const targetPx = Math.min(width, height) * 0.33
+  const targetPx = Math.min(width, height) * 0.39
   threeScene.camDist = (height * 0.5) / (targetPx * halfTan) / threeScene.zoom
 
   threeScene.camera.position.set(0, 0, threeScene.camDist)
@@ -725,6 +725,7 @@ export function renderThreeFrame(
     floydBeams.visible = !!params.gpuPrism
 
     prismMesh.visible = !params.chamber && !params.pump
+    prismMesh.geometry.setDrawRange(0, params.prismRing ? PRISM_RING_COUNT + 1 : 1)
 
     gpuMaterial.uniforms.uTime.value = time
     gpuMaterial.uniforms.uPR.value = renderer.getPixelRatio()
@@ -768,6 +769,9 @@ export function renderThreeFrame(
   // ring are suppressed so nothing crosses the body.
   const figureViz = healingViz ?? undefined
   prismMesh.visible = !params.chamber && !params.pump && !figureViz
+  // Index 0 is the white core; the rainbow ring follows. Draw the ring only
+  // when asked for — by default the center is just the white glow.
+  prismMesh.geometry.setDrawRange(0, params.prismRing ? PRISM_RING_COUNT + 1 : 1)
 
   let beamIndex = 0
 
