@@ -256,8 +256,8 @@ export function useThreeEngine(
         arz = 0
       } else {
         // Calculate rotation from params + drag
-        arx = (P.rx + drag.y * 0.001) * state.t
-        ary = (P.ry + drag.x * 0.001) * state.t
+        arx = P.rx * state.t + drag.y * 0.005
+        ary = P.ry * state.t + drag.x * 0.005
         arz = P.rz * state.t
       }
 
