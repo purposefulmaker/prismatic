@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type {
   BeamPattern,
@@ -490,22 +491,25 @@ export function PrismControlPanel({
         aria-expanded={isOpen}
         className={cn(
           'fixed z-[101]',
-          'bg-white/5 border border-white/8 cursor-pointer',
-          'items-center justify-center text-white/60',
-          'hover:bg-white/10 transition-all',
+          'bg-black/90 border border-white/40 cursor-pointer',
+          'items-center justify-center text-white',
+          'hover:bg-white/20 hover:border-white/70 transition-all',
+          'md:shadow-[0_0_14px_rgba(255,255,255,0.18)]',
           // Desktop: right edge, vertical
-          'md:top-1/2 md:-translate-y-1/2 md:w-5 md:h-[50px] md:border-r-0 md:rounded-l-sm md:text-[10px]',
+          'md:top-1/2 md:-translate-y-1/2 md:w-7 md:h-24 md:border-r-0 md:rounded-l-md md:text-sm',
           isOpen ? 'md:right-[300px]' : 'md:right-0',
           // Mobile: bottom center pill, lifted clear of the home indicator
           'left-1/2 -translate-x-1/2 md:bottom-auto md:left-auto md:translate-x-0',
           'bottom-[calc(1rem+env(safe-area-inset-bottom))] md:bottom-auto',
-          'w-16 h-10 rounded-full text-xs md:w-5 md:h-[50px] md:rounded-l-sm md:rounded-r-none',
+          'w-16 h-10 rounded-full text-xs md:w-7 md:h-24 md:rounded-l-md md:rounded-r-none',
           'border-b md:border-b',
           isOpen ? 'hidden md:flex' : 'flex'
         )}
       >
         <span className="md:hidden">CTRL</span>
-        <span className="hidden md:inline">{isOpen ? '▶' : '◀'}</span>
+        <span className="hidden md:inline" aria-hidden="true">
+          {isOpen ? <ChevronRight className="size-5" strokeWidth={2.5} /> : <ChevronLeft className="size-5" strokeWidth={2.5} />}
+        </span>
       </button>
 
       {/* Mobile backdrop — tapping the field above the sheet drops it away */}
