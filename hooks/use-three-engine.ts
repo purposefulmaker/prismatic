@@ -11,6 +11,8 @@ import {
   DEFAULT_NODE_COUNT,
   createVolumetricShells,
   VOLUMETRIC_NODE_BUDGET,
+  HEXAGRAM_EDGE_VERTS,
+  HEXAGRAM_VERTEX_COUNT,
   createThreeScene,
   updateViewport,
   renderThreeFrame,
@@ -58,6 +60,8 @@ export function useThreeEngine(
   // Fingerprint of the lattice fields that affect shell geometry; shells are
   // only resampled when this changes.
   const latticeKeyRef = useRef<string>('')
+  // Rotated hexagram edge endpoints, reused every frame (no per-frame alloc)
+  const hexagramRef = useRef<Float32Array>(new Float32Array(HEXAGRAM_VERTEX_COUNT * 3))
   const stateRef = useRef<EngineState>({
     ax: 0,
     ay: 0,
@@ -345,8 +349,22 @@ export function useThreeEngine(
         }
       }
 
+      // The hexagram rides the same Rodrigues rotation as the sphere, so it
+      // holds face-on at rest and tilts with the field when dragged.
+      let hexagram: Float32Array | null = null
+      if (P.hexagram && !P.chamber && !P.pump) {
+        hexagram = hexagramRef.current
+        for (let i = 0; i < HEXAGRAM_EDGE_VERTS.length; i++) {
+          const [ox, oy, oz] = HEXAGRAM_EDGE_VERTS[i]
+          const [mx, my, mz] = rodriguesRotate(ox, oy, oz, arx, ary, arz)
+          hexagram[i * 3] = mx
+          hexagram[i * 3 + 1] = my
+          hexagram[i * 3 + 2] = mz
+        }
+      }
+
       // Render with Three.js
-      renderThreeFrame(threeScene, activeNodes, P, state.t, dt, breath, healingVizRef.current)
+      renderThreeFrame(threeScene, activeNodes, P, state.t, dt, breath, healingVizRef.current, hexagram)
 
       // FPS calculation
       fpsCounterRef.current.count++

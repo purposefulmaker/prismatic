@@ -31,6 +31,8 @@ export { createShapeMask, isNodeInShape } from './shape-mask'
 export { resolveNodeColor, hexToRGB, rgbToHex } from './color'
 
 // Lattice / Volumetric Shells
+export { HEXAGRAM_EDGE_VERTS, HEXAGRAM_VERTEX_COUNT } from './hexagram'
+
 export {
   createVolumetricShells,
   VOLUMETRIC_NODE_BUDGET,

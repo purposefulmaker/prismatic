@@ -881,6 +881,20 @@ export function PrismControlPanel({
                   onChange={v => onParamChange('prismInt', v / 10)}
                 />
               </ControlRow>
+              <div className="flex items-center justify-between mt-2">
+                <label className="text-[9px] text-white/50">Spectrum ring (around core)</label>
+                <button
+                  onClick={() => onParamChange('prismRing', !params.prismRing)}
+                  className={cn(
+                    'px-3 py-1 text-[8px] tracking-[1px] rounded-sm border transition-all',
+                    params.prismRing
+                      ? 'bg-white/20 border-white/40 text-white'
+                      : 'bg-white/4 border-white/10 text-white/40'
+                  )}
+                >
+                  {params.prismRing ? 'ON' : 'OFF'}
+                </button>
+              </div>
             </Section>
 
             {/* Rotation */}
@@ -911,6 +925,20 @@ export function PrismControlPanel({
                   )}
                 >
                   {params.chamber ? 'ON' : 'OFF'}
+                </button>
+              </div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-[9px] text-white/50">Hexagram (△ meets ▽)</label>
+                <button
+                  onClick={() => onParamChange('hexagram', !params.hexagram)}
+                  className={cn(
+                    'px-3 py-1 text-[8px] tracking-[1px] rounded-sm border transition-all',
+                    params.hexagram
+                      ? 'bg-white/20 border-white/40 text-white'
+                      : 'bg-white/4 border-white/10 text-white/40'
+                  )}
+                >
+                  {params.hexagram ? 'ON' : 'OFF'}
                 </button>
               </div>
               <div className="flex items-center justify-between mb-2">

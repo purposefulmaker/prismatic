@@ -1,3 +1,19 @@
+# Default scene — white core, still sphere, the hexagram
+
+Three default-state changes, all in the FractalDot (CPU) path. Nothing new is forced on; every piece has a toggle.
+
+## What changed
+
+- **Prism core is white glow only.** The rotating rainbow ring around the core is now behind `prismRing` (default OFF; toggle under Prism Intensity as "Spectrum ring"). Implemented as a draw range on the prism `Points` — index 0 is the core, the ring follows — so no shader change. Core is slightly larger (size 11) and whiter.
+- **No sphere rotation by default.** `ry` 0.18 → 0 in `DEFAULT_PARAMETERS` and the GENESIS preset. The DFT sweep, breath, and POV persistence still animate; the RPM readout is 0 at rest. Drag still spins.
+- **Hexagram drawn in the sphere.** `lib/prism-engine/hexagram.ts` — the triangle meeting the inverted triangle, both inscribed in the z = 0 great circle (unit radius, same as the nodes). Rendered as 6 additive line edges with the beam shader (`starLines` on the ThreeScene), warm white, breathing with the field, brighter on the camera-near edges. The hook rotates the 12 endpoints with the same Rodrigues angles as the nodes each frame (no per-frame allocation — one reused `Float32Array`), so at rest it is the flat glyph and under drag it tilts through the field as a plane. Hidden when Chamber, Pump, or the Healing figure is on. Toggle: "Hexagram (△ meets ▽)" in Rodrigues Rotation, param `hexagram` (default ON).
+- **Framing widened**: `targetPx` 0.33 → 0.39 of the short viewport side.
+
+## Decision note
+
+A full 3D star tetrahedron (Merkaba) was tried first. From the camera its inner edges to the front/back vertices cut across both triangles and perspective skews the near one, so the glyph did not read as "triangle meeting upside-down triangle". The flat hexagram on the great circle does, and still turns in 3D with the sphere.
+
+
 # Lattice mode — the frame no longer freezes
 
 Lattice ON used to drop the frame to a crawl and leave a frozen ghost of the shells on screen after Lattice OFF. Three compounding causes, all in the CPU/FractalDot path; no parameters added, nothing changes outside lattice mode.
