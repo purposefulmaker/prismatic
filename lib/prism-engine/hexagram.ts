@@ -1,29 +1,61 @@
 // ═══════════════════════════════════════════════════════════════
-// NOTHINGBURGER ENGINE — Hexagram inscribed in the sphere
-// The triangle meeting the upside-down triangle, drawn on the great circle
-// that faces the camera. It rides the sphere's rotation, so at rest it is
-// the flat glyph and under drag it tilts through the field as a plane.
+// NOTHINGBURGER ENGINE — Hexagram geometry
+// The triangle meeting the inverted triangle, as a planar glyph on the
+// sphere's camera-facing face. Pure geometry: no rendering, no DOM.
 // ═══════════════════════════════════════════════════════════════
 
-type Vec3 = [number, number, number]
+/** Circumradius of each triangle in unit-sphere node space (ox, oy). */
+export const HEXAGRAM_RADIUS = 0.84
 
-const H = Math.sqrt(3) / 2
+/** Half-width of the lit edge band in node space (~0.6 of mean node spacing). */
+export const HEXAGRAM_BAND = 0.055
 
-// Node space: the renderer negates Y when drawing, so an apex at y = -1 here
-// lands at the TOP of the screen.
-const TRI_UP: Vec3[] = [
-  [0, -1, 0],
-  [H, 0.5, 0],
-  [-H, 0.5, 0],
-]
+type Vec2 = readonly [number, number]
+type Edge = readonly [Vec2, Vec2]
 
-const TRI_DOWN: Vec3[] = TRI_UP.map(([x, y, z]) => [-x, -y, z] as Vec3)
-
-function closedEdges(tri: Vec3[]): Vec3[] {
-  return [tri[0], tri[1], tri[1], tri[2], tri[2], tri[0]]
+function triangle(startDeg: number, r: number): Edge[] {
+  const pts: Vec2[] = [0, 1, 2].map(k => {
+    const a = ((startDeg + k * 120) * Math.PI) / 180
+    return [Math.cos(a) * r, Math.sin(a) * r] as const
+  })
+  return [
+    [pts[0], pts[1]],
+    [pts[1], pts[2]],
+    [pts[2], pts[0]],
+  ]
 }
 
-/** 6 edges × 2 endpoints = 12 unit vectors on the z = 0 great circle. */
-export const HEXAGRAM_EDGE_VERTS: Vec3[] = [...closedEdges(TRI_UP), ...closedEdges(TRI_DOWN)]
+/** Six edges: upright triangle (apex at +Y) then inverted (apex at −Y). */
+export function hexagramEdges(r: number = HEXAGRAM_RADIUS): Edge[] {
+  return [...triangle(90, r), ...triangle(270, r)]
+}
 
-export const HEXAGRAM_VERTEX_COUNT = HEXAGRAM_EDGE_VERTS.length
+const UNIT_EDGES = hexagramEdges(1)
+
+function distToSegment(px: number, py: number, [a, b]: Edge): number {
+  const abx = b[0] - a[0]
+  const aby = b[1] - a[1]
+  const apx = px - a[0]
+  const apy = py - a[1]
+  const len2 = abx * abx + aby * aby
+  const t = Math.max(0, Math.min(1, (apx * abx + apy * aby) / len2))
+  const dx = apx - abx * t
+  const dy = apy - aby * t
+  return Math.sqrt(dx * dx + dy * dy)
+}
+
+/**
+ * Shortest distance from a planar point to any hexagram edge, for a
+ * hexagram of circumradius r. Scales the unit edges rather than
+ * rebuilding them so the per-node call is allocation-free.
+ */
+export function hexagramEdgeDistance(px: number, py: number, r: number): number {
+  const ux = px / r
+  const uy = py / r
+  let best = Infinity
+  for (let i = 0; i < UNIT_EDGES.length; i++) {
+    const d = distToSegment(ux, uy, UNIT_EDGES[i])
+    if (d < best) best = d
+  }
+  return best * r
+}

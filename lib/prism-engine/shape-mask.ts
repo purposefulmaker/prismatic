@@ -4,45 +4,83 @@
 // ═══════════════════════════════════════════════════════════════
 
 import type { PrismNode } from './types'
+import { HEXAGRAM_BAND, HEXAGRAM_RADIUS, hexagramEdgeDistance, hexagramEdges } from './hexagram'
 
 /**
- * Generate a bitmap mask from text for sphere projection
+ * Generate the 256×128 shape mask: optional text, optional hexagram, both
+ * composed into one bitmap so every consumer (CPU wrap, planar, GPU texture)
+ * sees the same shape. Returns null when there is nothing to draw.
  */
 export function createShapeMask(
   text: string,
   canvas: HTMLCanvasElement,
-  ctx: CanvasRenderingContext2D
+  ctx: CanvasRenderingContext2D,
+  hexagram: boolean = false
 ): Uint8ClampedArray | null {
-  if (!text) return null
-
-  const txt = text
+  if (!text && !hexagram) return null
 
   canvas.width = 256
   canvas.height = 128
 
-  // Clear and draw text
   ctx.fillStyle = '#000'
   ctx.fillRect(0, 0, 256, 128)
-  ctx.fillStyle = '#fff'
 
-  // Fit the text to the canvas width so it stays bold and readable even
-  // for short strings like "v0". Start large, shrink until it fits.
-  let fontSize = 96
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  do {
+  if (hexagram) {
+    // The GPU shader maps node XY to the mask at 92.16 px per unit on both
+    // axes (u = 0.5 + x·0.36 over 256, v = 0.5 − y·0.72 over 128), so a
+    // regular hexagram in pixels is regular on the sphere. Radius is capped
+    // so the apexes stay inside the 128px height.
+    const pxPerUnit = 92.16
+    const r = Math.min(HEXAGRAM_RADIUS * pxPerUnit, 60)
+    ctx.strokeStyle = '#fff'
+    ctx.lineWidth = Math.max(4, HEXAGRAM_BAND * 2 * pxPerUnit)
+    ctx.lineJoin = 'round'
+    ctx.beginPath()
+    for (const [a, b] of hexagramEdges(r)) {
+      // Texture Y is top-down; node +Y is up
+      ctx.moveTo(128 + a[0], 64 - a[1])
+      ctx.lineTo(128 + b[0], 64 - b[1])
+    }
+    ctx.stroke()
+  }
+
+  if (text) {
+    ctx.fillStyle = '#fff'
+
+    // Fit the text to the canvas width so it stays bold and readable even
+    // for short strings like "v0". Start large, shrink until it fits.
+    let fontSize = 96
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    do {
+      ctx.font = `900 ${fontSize}px Arial, sans-serif`
+      const w = ctx.measureText(text).width
+      if (w <= 220) break
+      fontSize -= 4
+    } while (fontSize > 24)
+
     ctx.font = `900 ${fontSize}px Arial, sans-serif`
-    const w = ctx.measureText(txt).width
-    if (w <= 220) break
-    fontSize -= 4
-  } while (fontSize > 24)
+    ctx.fillText(text, 128, 64)
+  }
 
-  ctx.font = `900 ${fontSize}px Arial, sans-serif`
-  ctx.fillText(txt, 128, 64)
-
-  // Extract image data
   const img = ctx.getImageData(0, 0, 256, 128)
   return img.data
+}
+
+/**
+ * HEXAGRAM in the POV field: true when a node's ORIGINAL position sits on
+ * one of the six edges of the star drawn on the sphere's +Z face. Uses the
+ * untransformed coords so the glyph is attached to the sphere — it tilts
+ * with the field under drag — and the front-face gate keeps the back
+ * hemisphere from drawing a second, mirrored star behind the first.
+ *
+ * Analytic (distance-to-edge) rather than bitmap so the band is crisp at
+ * any node count and needs no canvas.
+ */
+export function isNodeInHexagram(node: PrismNode, shapeScale: number): boolean {
+  if (node.oz <= 0.05) return false
+  const r = HEXAGRAM_RADIUS * shapeScale
+  return hexagramEdgeDistance(node.ox, node.oy, r) <= HEXAGRAM_BAND
 }
 
 /**

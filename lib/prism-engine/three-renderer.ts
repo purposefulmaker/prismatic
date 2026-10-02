@@ -7,7 +7,6 @@ import * as THREE from 'three'
 import type { PrismNode, PrismParameters, HealingViz } from './types'
 import { sampleHealingFigure } from './healing-figure'
 import { wavelengthToRGB } from './physics'
-import { HEXAGRAM_VERTEX_COUNT } from './hexagram'
 
 // ─── Shader Sources ───
 
@@ -262,10 +261,6 @@ export interface ThreeScene {
   beamGeometry: THREE.BufferGeometry
   beamMaterial: THREE.ShaderMaterial
   prismMesh: THREE.Points
-  // Hexagram overlay: 6 glowing edges, triangle meeting inverted triangle
-  starLines: THREE.LineSegments
-  starPositions: Float32Array
-  starAlphas: Float32Array
   prismMaterial: THREE.ShaderMaterial
   starMaterial: THREE.ShaderMaterial
   dotPoints: THREE.Points
@@ -521,36 +516,6 @@ export function createThreeScene(canvas: HTMLCanvasElement, nodeCount: number): 
   const prismMesh = new THREE.Points(prismGeometry, prismMaterial)
   scene.add(prismMesh)
 
-  // ─── Hexagram overlay (triangle meeting the inverted triangle) ───
-  const merkPositions = new Float32Array(HEXAGRAM_VERTEX_COUNT * 3)
-  const merkColors = new Float32Array(HEXAGRAM_VERTEX_COUNT * 3)
-  const merkAlphas = new Float32Array(HEXAGRAM_VERTEX_COUNT)
-  // Warm white so the edges sit with the core glow rather than the spectrum
-  for (let i = 0; i < HEXAGRAM_VERTEX_COUNT; i++) {
-    merkColors[i * 3] = 1.0
-    merkColors[i * 3 + 1] = 0.97
-    merkColors[i * 3 + 2] = 0.9
-    merkAlphas[i] = 0.7
-  }
-  const merkGeometry = new THREE.BufferGeometry()
-  merkGeometry.setAttribute('position', new THREE.BufferAttribute(merkPositions, 3))
-  merkGeometry.setAttribute('color', new THREE.BufferAttribute(merkColors, 3))
-  merkGeometry.setAttribute('aAlpha', new THREE.BufferAttribute(merkAlphas, 1))
-  const starLines = new THREE.LineSegments(
-    merkGeometry,
-    new THREE.ShaderMaterial({
-      vertexShader: BEAM_VERTEX,
-      fragmentShader: BEAM_FRAGMENT,
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      depthTest: false,
-      depthWrite: false,
-      vertexColors: true,
-    })
-  )
-  starLines.visible = false
-  scene.add(starLines)
-
   // ─── Starfield ───
   const starPositions = new Float32Array(STAR_COUNT * 3)
   const starSizes = new Float32Array(STAR_COUNT)
@@ -629,9 +594,6 @@ export function createThreeScene(canvas: HTMLCanvasElement, nodeCount: number): 
     beamMaterial,
     prismMesh,
     prismMaterial,
-    starLines,
-    starPositions: merkPositions,
-    starAlphas: merkAlphas,
     starMaterial,
     dotPoints,
     beamLines,
@@ -732,10 +694,7 @@ export function renderThreeFrame(
   time: number,
   dt: number,
   breath: number,
-  healingViz?: HealingViz | null,
-  // Hexagram edge endpoints already rotated into node space (12 × xyz), or
-  // null to hide the overlay. The renderer applies breath and the Y flip.
-  hexagram?: Float32Array | null
+  healingViz?: HealingViz | null
 ): number {
   const {
     dotGeometry,
@@ -743,9 +702,6 @@ export function renderThreeFrame(
     beamGeometry,
     prismMesh,
     prismMaterial,
-    starLines,
-    starPositions,
-    starAlphas,
     starMaterial,
     dotPositions,
     dotColors,
@@ -770,7 +726,6 @@ export function renderThreeFrame(
 
     prismMesh.visible = !params.chamber && !params.pump
     prismMesh.geometry.setDrawRange(0, params.prismRing ? PRISM_RING_COUNT + 1 : 1)
-    starLines.visible = false
 
     gpuMaterial.uniforms.uTime.value = time
     gpuMaterial.uniforms.uPR.value = renderer.getPixelRatio()
@@ -817,24 +772,6 @@ export function renderThreeFrame(
   // Index 0 is the white core; the rainbow ring follows. Draw the ring only
   // when asked for — by default the center is just the white glow.
   prismMesh.geometry.setDrawRange(0, params.prismRing ? PRISM_RING_COUNT + 1 : 1)
-
-  // Hexagram edges: breathe with the field, Y-flipped like the dots
-  if (hexagram && !figureViz) {
-    const pulse = 0.55 + 0.2 * Math.sin(time * 1.5)
-    for (let i = 0; i < HEXAGRAM_VERTEX_COUNT; i++) {
-      starPositions[i * 3] = hexagram[i * 3] * breath
-      starPositions[i * 3 + 1] = -hexagram[i * 3 + 1] * breath
-      starPositions[i * 3 + 2] = hexagram[i * 3 + 2] * breath
-      // Edges nearer the camera glow brighter so the near triangle reads first
-      const depth = (hexagram[i * 3 + 2] + 1) / 2
-      starAlphas[i] = pulse * (0.45 + depth * 0.55)
-    }
-    starLines.geometry.attributes.position.needsUpdate = true
-    ; (starLines.geometry.attributes.aAlpha as THREE.BufferAttribute).needsUpdate = true
-    starLines.visible = true
-  } else {
-    starLines.visible = false
-  }
 
   let beamIndex = 0
 

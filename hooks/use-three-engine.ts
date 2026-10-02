@@ -11,8 +11,6 @@ import {
   DEFAULT_NODE_COUNT,
   createVolumetricShells,
   VOLUMETRIC_NODE_BUDGET,
-  HEXAGRAM_EDGE_VERTS,
-  HEXAGRAM_VERTEX_COUNT,
   createThreeScene,
   updateViewport,
   renderThreeFrame,
@@ -26,6 +24,7 @@ import {
   isNodeInShape,
   isNodeInPlanarShape,
   isNodeInSpotlightShape,
+  isNodeInHexagram,
 } from '@/lib/prism-engine/shape-mask'
 
 // GPU buffer headroom over the base node count. Must be >= VOLUMETRIC_NODE_BUDGET
@@ -60,8 +59,6 @@ export function useThreeEngine(
   // Fingerprint of the lattice fields that affect shell geometry; shells are
   // only resampled when this changes.
   const latticeKeyRef = useRef<string>('')
-  // Rotated hexagram edge endpoints, reused every frame (no per-frame alloc)
-  const hexagramRef = useRef<Float32Array>(new Float32Array(HEXAGRAM_VERTEX_COUNT * 3))
   const stateRef = useRef<EngineState>({
     ax: 0,
     ay: 0,
@@ -115,7 +112,12 @@ export function useThreeEngine(
     if (textCanvasRef.current) {
       const ctx = textCanvasRef.current.getContext('2d')
       if (ctx) {
-        shapeMaskRef.current = createShapeMask(params.shapeTxt, textCanvasRef.current, ctx)
+        shapeMaskRef.current = createShapeMask(
+        params.shapeTxt,
+        textCanvasRef.current,
+        ctx,
+        params.hexagram
+      )
       }
     }
 
@@ -174,7 +176,12 @@ export function useThreeEngine(
     // Initialize shape mask
     const textCtx = textCanvas.getContext('2d')
     if (textCtx) {
-      shapeMaskRef.current = createShapeMask(paramsRef.current.shapeTxt, textCanvas, textCtx)
+      shapeMaskRef.current = createShapeMask(
+        paramsRef.current.shapeTxt,
+        textCanvas,
+        textCtx,
+        paramsRef.current.hexagram
+      )
     }
 
     // Set initial viewport
@@ -333,9 +340,18 @@ export function useThreeEngine(
           if (!inText && node.intensity < 0.07) node.intensity = 0.07
           if (input > 0) beamCount++
         } else {
-          // Standard mode: beam pattern and shape mask
+          // Standard mode: beam pattern and shape mask. The shape is the
+          // union of the text glyph (wrapped on the sphere) and the hexagram
+          // (planar on the +Z face); with neither, the whole sphere is lit.
           const bp = calculateBeamPattern(node, P.pattern, state.t, P, nodeCount)
-          const inShape = isNodeInShape(node, shapeMaskRef.current, P.shapeScale)
+          let inShape: boolean
+          if (P.hexagram) {
+            inShape =
+              isNodeInHexagram(node, P.shapeScale) ||
+              (!!P.shapeTxt && isNodeInShape(node, shapeMaskRef.current, P.shapeScale))
+          } else {
+            inShape = isNodeInShape(node, shapeMaskRef.current, P.shapeScale)
+          }
           // FIELD FORMS — the pump and chamber as sources in this same field:
           // the engine's own particles, colors, tau, breath, and rotation
           let src = bp && inShape ? 1.0 : 0.0
@@ -349,22 +365,8 @@ export function useThreeEngine(
         }
       }
 
-      // The hexagram rides the same Rodrigues rotation as the sphere, so it
-      // holds face-on at rest and tilts with the field when dragged.
-      let hexagram: Float32Array | null = null
-      if (P.hexagram && !P.chamber && !P.pump) {
-        hexagram = hexagramRef.current
-        for (let i = 0; i < HEXAGRAM_EDGE_VERTS.length; i++) {
-          const [ox, oy, oz] = HEXAGRAM_EDGE_VERTS[i]
-          const [mx, my, mz] = rodriguesRotate(ox, oy, oz, arx, ary, arz)
-          hexagram[i * 3] = mx
-          hexagram[i * 3 + 1] = my
-          hexagram[i * 3 + 2] = mz
-        }
-      }
-
       // Render with Three.js
-      renderThreeFrame(threeScene, activeNodes, P, state.t, dt, breath, healingVizRef.current, hexagram)
+      renderThreeFrame(threeScene, activeNodes, P, state.t, dt, breath, healingVizRef.current)
 
       // FPS calculation
       fpsCounterRef.current.count++
